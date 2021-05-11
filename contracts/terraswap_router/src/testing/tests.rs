@@ -6,12 +6,12 @@ use cosmwasm_std::{
 use crate::contract::{handle, init, query};
 use crate::testing::mock_querier::mock_dependencies;
 
-use cw20::{Cw20HandleMsg, Cw20ReceiveMsg};
+use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terra_cosmwasm::{create_swap_msg, create_swap_send_msg};
 use terraswap::asset::{Asset, AssetInfo};
-use terraswap::pair::HandleMsg as PairHandleMsg;
+use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::router::{
-    ConfigResponse, Cw20HookMsg, HandleMsg, InitMsg, QueryMsg, SimulateSwapOperationsResponse,
+    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg, SimulateSwapOperationsResponse,
     SwapOperation,
 };
 
@@ -19,7 +19,7 @@ use terraswap::router::{
 fn proper_initialization() {
     let mut deps = mock_dependencies(20, &[]);
 
-    let msg = InitMsg {
+    let msg = InstantiateMsg {
         terraswap_factory: HumanAddr("terraswapfactory".to_string()),
     };
 
@@ -36,7 +36,7 @@ fn proper_initialization() {
 #[test]
 fn execute_swap_operations() {
     let mut deps = mock_dependencies(20, &[]);
-    let msg = InitMsg {
+    let msg = InstantiateMsg {
         terraswap_factory: HumanAddr("terraswapfactory".to_string()),
     };
 
@@ -45,7 +45,7 @@ fn execute_swap_operations() {
     // we can just call .unwrap() to assert this was a success
     let _res = init(&mut deps, env, msg).unwrap();
 
-    let msg = HandleMsg::ExecuteSwapOperations {
+    let msg = ExecuteMsg::ExecuteSwapOperations {
         operations: vec![],
         minimum_receive: None,
         to: None,
@@ -58,7 +58,7 @@ fn execute_swap_operations() {
         _ => panic!("DO NOT ENTER HERE"),
     }
 
-    let msg = HandleMsg::ExecuteSwapOperations {
+    let msg = ExecuteMsg::ExecuteSwapOperations {
         operations: vec![
             SwapOperation::NativeSwap {
                 offer_denom: "uusd".to_string(),
@@ -101,7 +101,7 @@ fn execute_swap_operations() {
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
                 send: vec![],
-                msg: to_binary(&HandleMsg::ExecuteSwapOperation {
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::NativeSwap {
                         offer_denom: "uusd".to_string(),
                         ask_denom: "ukrw".to_string(),
@@ -113,7 +113,7 @@ fn execute_swap_operations() {
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
                 send: vec![],
-                msg: to_binary(&HandleMsg::ExecuteSwapOperation {
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::NativeToken {
                             denom: "ukrw".to_string(),
@@ -129,7 +129,7 @@ fn execute_swap_operations() {
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
                 send: vec![],
-                msg: to_binary(&HandleMsg::ExecuteSwapOperation {
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::Token {
                             contract_addr: HumanAddr::from("asset0001"),
@@ -145,7 +145,7 @@ fn execute_swap_operations() {
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
                 send: vec![],
-                msg: to_binary(&HandleMsg::ExecuteSwapOperation {
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::NativeToken {
                             denom: "uluna".to_string(),
@@ -161,7 +161,7 @@ fn execute_swap_operations() {
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
                 send: vec![],
-                msg: to_binary(&HandleMsg::AssertMinimumReceive {
+                msg: to_binary(&ExecuteMsg::AssertMinimumReceive {
                     asset_info: AssetInfo::Token {
                         contract_addr: HumanAddr::from("asset0002"),
                     },
@@ -174,7 +174,7 @@ fn execute_swap_operations() {
         ]
     );
 
-    let msg = HandleMsg::Receive(Cw20ReceiveMsg {
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: HumanAddr::from("addr0000"),
         amount: Uint128::from(1000000u128),
         msg: Some(
@@ -224,7 +224,7 @@ fn execute_swap_operations() {
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
                 send: vec![],
-                msg: to_binary(&HandleMsg::ExecuteSwapOperation {
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::NativeSwap {
                         offer_denom: "uusd".to_string(),
                         ask_denom: "ukrw".to_string(),
@@ -236,7 +236,7 @@ fn execute_swap_operations() {
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
                 send: vec![],
-                msg: to_binary(&HandleMsg::ExecuteSwapOperation {
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::NativeToken {
                             denom: "ukrw".to_string(),
@@ -252,7 +252,7 @@ fn execute_swap_operations() {
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
                 send: vec![],
-                msg: to_binary(&HandleMsg::ExecuteSwapOperation {
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::Token {
                             contract_addr: HumanAddr::from("asset0001"),
@@ -268,7 +268,7 @@ fn execute_swap_operations() {
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
                 send: vec![],
-                msg: to_binary(&HandleMsg::ExecuteSwapOperation {
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::NativeToken {
                             denom: "uluna".to_string(),
@@ -288,7 +288,7 @@ fn execute_swap_operations() {
 #[test]
 fn execute_swap_operation() {
     let mut deps = mock_dependencies(20, &[]);
-    let msg = InitMsg {
+    let msg = InstantiateMsg {
         terraswap_factory: HumanAddr("terraswapfactory".to_string()),
     };
 
@@ -311,7 +311,7 @@ fn execute_swap_operation() {
         }],
     )]);
 
-    let msg = HandleMsg::ExecuteSwapOperation {
+    let msg = ExecuteMsg::ExecuteSwapOperation {
         operation: SwapOperation::NativeSwap {
             offer_denom: "uusd".to_string(),
             ask_denom: "uluna".to_string(),
@@ -341,7 +341,7 @@ fn execute_swap_operation() {
 
     // optional to address
     // swap_send
-    let msg = HandleMsg::ExecuteSwapOperation {
+    let msg = ExecuteMsg::ExecuteSwapOperation {
         operation: SwapOperation::NativeSwap {
             offer_denom: "uusd".to_string(),
             ask_denom: "uluna".to_string(),
@@ -369,7 +369,7 @@ fn execute_swap_operation() {
         &[(&HumanAddr::from(MOCK_CONTRACT_ADDR), &Uint128(1000000u128))],
     )]);
 
-    let msg = HandleMsg::ExecuteSwapOperation {
+    let msg = ExecuteMsg::ExecuteSwapOperation {
         operation: SwapOperation::TerraSwap {
             offer_asset_info: AssetInfo::Token {
                 contract_addr: HumanAddr::from("asset"),
@@ -388,11 +388,11 @@ fn execute_swap_operation() {
         vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: HumanAddr::from("asset"),
             send: vec![],
-            msg: to_binary(&Cw20HandleMsg::Send {
+            msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: HumanAddr::from("pair"),
                 amount: Uint128(1000000u128),
                 msg: Some(
-                    to_binary(&PairHandleMsg::Swap {
+                    to_binary(&PairExecuteMsg::Swap {
                         offer_asset: Asset {
                             info: AssetInfo::Token {
                                 contract_addr: HumanAddr::from("asset"),
@@ -415,7 +415,7 @@ fn execute_swap_operation() {
 fn query_buy_with_routes() {
     let mut deps = mock_dependencies(20, &[]);
 
-    let msg = InitMsg {
+    let msg = InstantiateMsg {
         terraswap_factory: HumanAddr("terraswapfactory".to_string()),
     };
 
@@ -508,7 +508,7 @@ fn assert_minimum_receive_native_token() {
 
     let env = mock_env("addr0000", &[]);
     // success
-    let msg = HandleMsg::AssertMinimumReceive {
+    let msg = ExecuteMsg::AssertMinimumReceive {
         asset_info: AssetInfo::NativeToken {
             denom: "uusd".to_string(),
         },
@@ -519,7 +519,7 @@ fn assert_minimum_receive_native_token() {
     let _res = handle(&mut deps, env.clone(), msg).unwrap();
 
     // assertion failed; native token
-    let msg = HandleMsg::AssertMinimumReceive {
+    let msg = ExecuteMsg::AssertMinimumReceive {
         asset_info: AssetInfo::NativeToken {
             denom: "uusd".to_string(),
         },
@@ -547,7 +547,7 @@ fn assert_minimum_receive_token() {
 
     let env = mock_env("addr0000", &[]);
     // success
-    let msg = HandleMsg::AssertMinimumReceive {
+    let msg = ExecuteMsg::AssertMinimumReceive {
         asset_info: AssetInfo::Token {
             contract_addr: HumanAddr::from("token0000"),
         },
@@ -558,7 +558,7 @@ fn assert_minimum_receive_token() {
     let _res = handle(&mut deps, env.clone(), msg).unwrap();
 
     // assertion failed; native token
-    let msg = HandleMsg::AssertMinimumReceive {
+    let msg = ExecuteMsg::AssertMinimumReceive {
         asset_info: AssetInfo::Token {
             contract_addr: HumanAddr::from("token0000"),
         },

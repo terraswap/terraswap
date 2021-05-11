@@ -1,17 +1,14 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ConfigResponse",
+  "title": "InstantiateMsg",
   "type": "object",
   "required": [
-    "owner",
     "pair_code_id",
     "token_code_id"
   ],
   "properties": {
-    "owner": {
-      "type": "string"
-    },
     "pair_code_id": {
+      "description": "Pair contract code ID, which is used to",
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0

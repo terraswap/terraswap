@@ -1,12 +1,11 @@
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse, MigrateResult, Querier,
-    QueryRequest, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
+    entry_point, from_binary, to_binary, Addr, Api, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 
 use crate::operations::execute_swap_operation;
 use crate::querier::compute_tax;
-use crate::state::{read_config, store_config, Config};
+use crate::state::{Config, CONFIG};
 
 use cw20::Cw20ReceiveMsg;
 use std::collections::HashMap;
@@ -15,84 +14,120 @@ use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::pair::{QueryMsg as PairQueryMsg, SimulationResponse};
 use terraswap::querier::query_pair_info;
 use terraswap::router::{
-    ConfigResponse, Cw20HookMsg, HandleMsg, InitMsg, MigrateMsg, QueryMsg,
+    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn instantiate(
+    deps: DepsMut,
     _env: Env,
-    msg: InitMsg,
-) -> InitResult {
-    store_config(
-        &mut deps.storage,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
+) -> StdResult<Response> {
+    CONFIG.save(
+        deps.storage,
         &Config {
-            terraswap_factory: deps.api.canonical_address(&msg.terraswap_factory)?,
+            terraswap_factory: deps.api.addr_canonicalize(&msg.terraswap_factory)?,
         },
     )?;
 
-    Ok(InitResponse::default())
+    Ok(Response::default())
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn execute(
+    deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
-) -> StdResult<HandleResponse<TerraMsgWrapper>> {
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> StdResult<Response<TerraMsgWrapper>> {
     match msg {
-        HandleMsg::Receive(msg) => receive_cw20(deps, env, msg),
-        HandleMsg::ExecuteSwapOperations {
+        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
+        ExecuteMsg::ExecuteSwapOperations {
             operations,
             minimum_receive,
             to,
-        } => execute_swap_operations(
-            deps,
-            env.clone(),
-            env.message.sender,
-            operations,
-            minimum_receive,
-            to,
-        ),
-        HandleMsg::ExecuteSwapOperation { operation, to } => {
-            execute_swap_operation(deps, env, operation, to)
+        } => {
+            let api = deps.api;
+            execute_swap_operations(
+                deps,
+                env,
+                info.sender,
+                operations,
+                minimum_receive,
+                optional_addr_validate(api, to)?,
+            )
         }
-        HandleMsg::AssertMinimumReceive {
+        ExecuteMsg::ExecuteSwapOperation { operation, to } => {
+            let api = deps.api;
+            execute_swap_operation(
+                deps,
+                env,
+                info,
+                operation,
+                optional_addr_validate(api, to)?.map(|v| v.to_string()),
+            )
+        }
+        ExecuteMsg::AssertMinimumReceive {
             asset_info,
             prev_balance,
             minimum_receive,
             receiver,
-        } => assert_minium_receive(deps, asset_info, prev_balance, minimum_receive, receiver),
+        } => assert_minium_receive(
+            deps.as_ref(),
+            asset_info,
+            prev_balance,
+            minimum_receive,
+            deps.api.addr_validate(&receiver)?,
+        ),
     }
 }
 
-pub fn receive_cw20<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<Option<Addr>> {
+    let addr = if let Some(addr) = addr {
+        Some(api.addr_validate(&addr)?)
+    } else {
+        None
+    };
+
+    Ok(addr)
+}
+
+pub fn receive_cw20(
+    deps: DepsMut,
     env: Env,
+    _info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
-) -> HandleResult<TerraMsgWrapper> {
-    if let Some(msg) = cw20_msg.msg {
-        match from_binary(&msg)? {
-            Cw20HookMsg::ExecuteSwapOperations {
+) -> StdResult<Response<TerraMsgWrapper>> {
+    let sender = deps.api.addr_validate(&cw20_msg.sender)?;
+    match from_binary(&cw20_msg.msg)? {
+        Cw20HookMsg::ExecuteSwapOperations {
+            operations,
+            minimum_receive,
+            to,
+        } => {
+            let api = deps.api;
+            execute_swap_operations(
+                deps,
+                env,
+                sender,
                 operations,
                 minimum_receive,
-                to,
-            } => {
-                execute_swap_operations(deps, env, cw20_msg.sender, operations, minimum_receive, to)
-            }
+                optional_addr_validate(api, to)?,
+            )
         }
-    } else {
-        Err(StdError::generic_err("data should be given"))
     }
 }
 
-pub fn execute_swap_operations<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn execute_swap_operations(
+    deps: DepsMut,
     env: Env,
-    sender: HumanAddr,
+    sender: Addr,
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
-    to: Option<HumanAddr>,
-) -> HandleResult<TerraMsgWrapper> {
+    to: Option<Addr>,
+) -> StdResult<Response<TerraMsgWrapper>> {
     let operations_len = operations.len();
     if operations_len == 0 {
         return Err(StdError::generic_err("must provide operations"));
@@ -110,12 +145,12 @@ pub fn execute_swap_operations<S: Storage, A: Api, Q: Querier>(
         .map(|op| {
             operation_index += 1;
             Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: env.contract.address.clone(),
+                contract_addr: env.contract.address.to_string(),
                 send: vec![],
-                msg: to_binary(&HandleMsg::ExecuteSwapOperation {
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: op,
                     to: if operation_index == operations_len {
-                        Some(to.clone())
+                        Some(to.to_string())
                     } else {
                         None
                     },
@@ -126,35 +161,36 @@ pub fn execute_swap_operations<S: Storage, A: Api, Q: Querier>(
 
     // Execute minimum amount assertion
     if let Some(minimum_receive) = minimum_receive {
-        let receiver_balance = target_asset_info.query_pool(&deps, &to)?;
+        let receiver_balance = target_asset_info.query_pool(&deps.querier, deps.api, to.clone())?;
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: env.contract.address,
+            contract_addr: env.contract.address.to_string(),
             send: vec![],
-            msg: to_binary(&HandleMsg::AssertMinimumReceive {
+            msg: to_binary(&ExecuteMsg::AssertMinimumReceive {
                 asset_info: target_asset_info,
                 prev_balance: receiver_balance,
                 minimum_receive,
-                receiver: to,
+                receiver: to.to_string(),
             })?,
         }))
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
-        log: vec![],
+        submessages: vec![],
+        attributes: vec![],
         data: None,
     })
 }
 
-fn assert_minium_receive<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+fn assert_minium_receive(
+    deps: Deps,
     asset_info: AssetInfo,
     prev_balance: Uint128,
     minium_receive: Uint128,
-    receiver: HumanAddr,
-) -> HandleResult<TerraMsgWrapper> {
-    let receiver_balance = asset_info.query_pool(&deps, &receiver)?;
-    let swap_amount = (receiver_balance - prev_balance)?;
+    receiver: Addr,
+) -> StdResult<Response<TerraMsgWrapper>> {
+    let receiver_balance = asset_info.query_pool(&deps.querier, deps.api, receiver)?;
+    let swap_amount = receiver_balance.checked_sub(prev_balance)?;
 
     if swap_amount < minium_receive {
         return Err(StdError::generic_err(format!(
@@ -163,13 +199,11 @@ fn assert_minium_receive<S: Storage, A: Api, Q: Querier>(
         )));
     }
 
-    Ok(HandleResponse::default())
+    Ok(Response::default())
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::SimulateSwapOperations {
@@ -179,32 +213,25 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn query_config<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<ConfigResponse> {
-    let state = read_config(&deps.storage)?;
+pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+    let state = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
-        terraswap_factory: deps.api.human_address(&state.terraswap_factory)?,
+        terraswap_factory: deps
+            .api
+            .addr_humanize(&state.terraswap_factory)?
+            .to_string(),
     };
 
     Ok(resp)
 }
 
-pub fn migrate<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
-    _env: Env,
-    _msg: MigrateMsg,
-) -> MigrateResult {
-    Ok(MigrateResponse::default())
-}
-
-fn simulate_swap_operations<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+fn simulate_swap_operations(
+    deps: Deps,
     offer_amount: Uint128,
     operations: Vec<SwapOperation>,
 ) -> StdResult<SimulateSwapOperationsResponse> {
-    let config: Config = read_config(&deps.storage)?;
-    let terraswap_factory = deps.api.human_address(&config.terraswap_factory)?;
+    let config: Config = CONFIG.load(deps.storage)?;
+    let terraswap_factory = deps.api.addr_humanize(&config.terraswap_factory)?;
     let terra_querier = TerraQuerier::new(&deps.querier);
 
     let operations_len = operations.len();
@@ -225,8 +252,11 @@ fn simulate_swap_operations<S: Storage, A: Api, Q: Querier>(
                 // Deduct tax before query simulation
                 // because last swap is swap_send
                 if operation_index == operations_len {
-                    offer_amount =
-                        (offer_amount - compute_tax(&deps, offer_amount, offer_denom.clone())?)?;
+                    offer_amount = offer_amount.checked_sub(compute_tax(
+                        &deps.querier,
+                        offer_amount,
+                        offer_denom.clone(),
+                    )?)?;
                 }
 
                 let res: SwapResponse = terra_querier.query_swap(
@@ -244,22 +274,23 @@ fn simulate_swap_operations<S: Storage, A: Api, Q: Querier>(
                 ask_asset_info,
             } => {
                 let pair_info: PairInfo = query_pair_info(
-                    &deps,
-                    &terraswap_factory,
+                    &deps.querier,
+                    terraswap_factory.clone(),
                     &[offer_asset_info.clone(), ask_asset_info.clone()],
                 )?;
 
                 // Deduct tax before querying simulation
-                match offer_asset_info.clone() {
-                    AssetInfo::NativeToken { denom } => {
-                        offer_amount = (offer_amount - compute_tax(&deps, offer_amount, denom)?)?;
-                    }
-                    _ => {}
+                if let AssetInfo::NativeToken { denom } = offer_asset_info.clone() {
+                    offer_amount = offer_amount.checked_sub(compute_tax(
+                        &deps.querier,
+                        offer_amount,
+                        denom,
+                    )?)?;
                 }
 
                 let mut res: SimulationResponse =
                     deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-                        contract_addr: HumanAddr::from(pair_info.contract_addr),
+                        contract_addr: pair_info.contract_addr.to_string(),
                         msg: to_binary(&PairQueryMsg::Simulation {
                             offer_asset: Asset {
                                 info: offer_asset_info,
@@ -269,12 +300,12 @@ fn simulate_swap_operations<S: Storage, A: Api, Q: Querier>(
                     }))?;
 
                 // Deduct tax after querying simulation
-                match ask_asset_info.clone() {
-                    AssetInfo::NativeToken { denom } => {
-                        res.return_amount =
-                            (res.return_amount - compute_tax(&deps, res.return_amount, denom)?)?;
-                    }
-                    _ => {}
+                if let AssetInfo::NativeToken { denom } = ask_asset_info {
+                    res.return_amount = res.return_amount.checked_sub(compute_tax(
+                        &deps.querier,
+                        res.return_amount,
+                        denom,
+                    )?)?;
                 }
 
                 offer_amount = res.return_amount;
@@ -287,9 +318,9 @@ fn simulate_swap_operations<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-fn assert_operations(operations: &Vec<SwapOperation>) -> StdResult<()> {
+fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
     let mut ask_asset_map: HashMap<String, bool> = HashMap::new();
-    for operation in operations.into_iter() {
+    for operation in operations.iter() {
         let (offer_asset, ask_asset) = match operation {
             SwapOperation::NativeSwap {
                 offer_denom,
@@ -339,12 +370,12 @@ fn test_invalid_operations() {
                     denom: "ukrw".to_string(),
                 },
                 ask_asset_info: AssetInfo::Token {
-                    contract_addr: HumanAddr::from("asset0001"),
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
             },
             SwapOperation::TerraSwap {
                 offer_asset_info: AssetInfo::Token {
-                    contract_addr: HumanAddr::from("asset0001"),
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
                 ask_asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
@@ -367,12 +398,12 @@ fn test_invalid_operations() {
                     denom: "ukrw".to_string(),
                 },
                 ask_asset_info: AssetInfo::Token {
-                    contract_addr: HumanAddr::from("asset0001"),
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
             },
             SwapOperation::TerraSwap {
                 offer_asset_info: AssetInfo::Token {
-                    contract_addr: HumanAddr::from("asset0001"),
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
                 ask_asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
@@ -383,7 +414,7 @@ fn test_invalid_operations() {
                     denom: "uluna".to_string(),
                 },
                 ask_asset_info: AssetInfo::Token {
-                    contract_addr: HumanAddr::from("asset0002"),
+                    contract_addr: Addr::unchecked("asset0002"),
                 },
             },
         ])
@@ -403,12 +434,12 @@ fn test_invalid_operations() {
                     denom: "ukrw".to_string(),
                 },
                 ask_asset_info: AssetInfo::Token {
-                    contract_addr: HumanAddr::from("asset0001"),
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
             },
             SwapOperation::TerraSwap {
                 offer_asset_info: AssetInfo::Token {
-                    contract_addr: HumanAddr::from("asset0001"),
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
                 ask_asset_info: AssetInfo::NativeToken {
                     denom: "uaud".to_string(),
@@ -419,7 +450,7 @@ fn test_invalid_operations() {
                     denom: "uluna".to_string(),
                 },
                 ask_asset_info: AssetInfo::Token {
-                    contract_addr: HumanAddr::from("asset0002"),
+                    contract_addr: Addr::unchecked("asset0002"),
                 },
             },
         ])
