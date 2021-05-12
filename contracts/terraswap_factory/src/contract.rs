@@ -162,11 +162,20 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
         &tmp_pair_info.pair_key,
         &PairInfoRaw {
             liquidity_token: deps.api.addr_canonicalize(liquidity_token.as_str())?,
-            contract_addr: deps.api.addr_canonicalize(&pair_contract)?,
+            contract_addr: deps.api.addr_canonicalize(pair_contract)?,
             asset_infos: tmp_pair_info.asset_infos,
         },
     )?;
-    Ok(Response::default())
+
+    Ok(Response {
+        messages: vec![],
+        submessages: vec![],
+        attributes: vec![
+            attr("pair_contract_addr", pair_contract),
+            attr("liquidity_token_addr", liquidity_token.as_str()),
+        ],
+        data: None,
+    })
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

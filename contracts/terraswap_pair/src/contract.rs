@@ -189,14 +189,20 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
         Message::parse_from_bytes(data.as_slice()).map_err(|_| {
             StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
         })?;
+    let liquidity_token = res.get_contract_address();
 
-    let liquidity_token = deps.api.addr_canonicalize(res.get_contract_address())?;
+    let api = deps.api;
     PAIR_INFO.update(deps.storage, |mut meta| -> StdResult<_> {
-        meta.liquidity_token = liquidity_token;
+        meta.liquidity_token = api.addr_canonicalize(liquidity_token)?;
         Ok(meta)
     })?;
 
-    Ok(Response::default())
+    Ok(Response {
+        messages: vec![],
+        submessages: vec![],
+        attributes: vec![attr("liquidity_token_addr", liquidity_token)],
+        data: None,
+    })
 }
 
 /// CONTRACT - should approve contract to use the amount of token
