@@ -4,7 +4,7 @@ use std::fmt;
 
 use crate::querier::{query_balance, query_token_balance};
 use cosmwasm_std::{
-    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, MessageInfo,
+    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, MessageInfo,
     QuerierWrapper, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
@@ -29,13 +29,13 @@ impl Asset {
         self.info.is_native_token()
     }
 
-    pub fn compute_tax(&self, deps: Deps) -> StdResult<Uint128> {
+    pub fn compute_tax(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
         let amount = self.amount;
         if let AssetInfo::NativeToken { denom } = &self.info {
             if denom == "uluna" {
                 Ok(Uint128::zero())
             } else {
-                let terra_querier = TerraQuerier::new(&deps.querier);
+                let terra_querier = TerraQuerier::new(querier);
                 let tax_rate: Decimal = (terra_querier.query_tax_rate()?).rate;
                 let tax_cap: Uint128 = (terra_querier.query_tax_cap(denom.to_string())?).cap;
                 Ok(std::cmp::min(
@@ -51,19 +51,19 @@ impl Asset {
         }
     }
 
-    pub fn deduct_tax(&self, deps: Deps) -> StdResult<Coin> {
+    pub fn deduct_tax(&self, querier: &QuerierWrapper) -> StdResult<Coin> {
         let amount = self.amount;
         if let AssetInfo::NativeToken { denom } = &self.info {
             Ok(Coin {
                 denom: denom.to_string(),
-                amount: amount.checked_sub(self.compute_tax(deps)?)?,
+                amount: amount.checked_sub(self.compute_tax(querier)?)?,
             })
         } else {
             Err(StdError::generic_err("cannot deduct tax from token asset"))
         }
     }
 
-    pub fn into_msg(self, deps: Deps, recipient: Addr) -> StdResult<CosmosMsg> {
+    pub fn into_msg(self, querier: &QuerierWrapper, recipient: Addr) -> StdResult<CosmosMsg> {
         let amount = self.amount;
 
         match &self.info {
@@ -77,7 +77,7 @@ impl Asset {
             })),
             AssetInfo::NativeToken { .. } => Ok(CosmosMsg::Bank(BankMsg::Send {
                 to_address: recipient.to_string(),
-                amount: vec![self.deduct_tax(deps)?],
+                amount: vec![self.deduct_tax(querier)?],
             })),
         }
     }
@@ -105,14 +105,14 @@ impl Asset {
         }
     }
 
-    pub fn to_raw(&self, deps: Deps) -> StdResult<AssetRaw> {
+    pub fn to_raw(&self, api: &dyn Api) -> StdResult<AssetRaw> {
         Ok(AssetRaw {
             info: match &self.info {
                 AssetInfo::NativeToken { denom } => AssetInfoRaw::NativeToken {
                     denom: denom.to_string(),
                 },
                 AssetInfo::Token { contract_addr } => AssetInfoRaw::Token {
-                    contract_addr: deps.api.addr_canonicalize(contract_addr.as_str())?,
+                    contract_addr: api.addr_canonicalize(contract_addr.as_str())?,
                 },
             },
             amount: self.amount,
@@ -139,13 +139,13 @@ impl fmt::Display for AssetInfo {
 }
 
 impl AssetInfo {
-    pub fn to_raw(&self, deps: Deps) -> StdResult<AssetInfoRaw> {
+    pub fn to_raw(&self, api: &dyn Api) -> StdResult<AssetInfoRaw> {
         match self {
             AssetInfo::NativeToken { denom } => Ok(AssetInfoRaw::NativeToken {
                 denom: denom.to_string(),
             }),
             AssetInfo::Token { contract_addr } => Ok(AssetInfoRaw::Token {
-                contract_addr: deps.api.addr_canonicalize(contract_addr.as_str())?,
+                contract_addr: api.addr_canonicalize(contract_addr.as_str())?,
             }),
         }
     }
@@ -199,14 +199,14 @@ pub struct AssetRaw {
 }
 
 impl AssetRaw {
-    pub fn to_normal(&self, deps: Deps) -> StdResult<Asset> {
+    pub fn to_normal(&self, api: &dyn Api) -> StdResult<Asset> {
         Ok(Asset {
             info: match &self.info {
                 AssetInfoRaw::NativeToken { denom } => AssetInfo::NativeToken {
                     denom: denom.to_string(),
                 },
                 AssetInfoRaw::Token { contract_addr } => AssetInfo::Token {
-                    contract_addr: deps.api.addr_humanize(&contract_addr)?,
+                    contract_addr: api.addr_humanize(&contract_addr)?,
                 },
             },
             amount: self.amount,

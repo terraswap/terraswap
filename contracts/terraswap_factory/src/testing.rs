@@ -160,8 +160,8 @@ fn create_pair() {
     );
 
     let raw_infos = [
-        asset_infos[0].to_raw(deps.as_ref()).unwrap(),
-        asset_infos[1].to_raw(deps.as_ref()).unwrap(),
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
     ];
 
     assert_eq!(
@@ -187,8 +187,8 @@ fn reply_test() {
     ];
 
     let raw_infos = [
-        asset_infos[0].to_raw(deps.as_ref()).unwrap(),
-        asset_infos[1].to_raw(deps.as_ref()).unwrap(),
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
     ];
 
     let pair_key = pair_key(&raw_infos);

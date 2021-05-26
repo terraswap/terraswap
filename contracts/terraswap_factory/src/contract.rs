@@ -101,8 +101,8 @@ pub fn execute_create_pair(
 ) -> StdResult<Response> {
     let config: Config = CONFIG.load(deps.storage)?;
     let raw_infos = [
-        asset_infos[0].to_raw(deps.as_ref())?,
-        asset_infos[1].to_raw(deps.as_ref())?,
+        asset_infos[0].to_raw(deps.api)?,
+        asset_infos[1].to_raw(deps.api)?,
     ];
 
     let pair_key = pair_key(&raw_infos);
@@ -201,7 +201,10 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 }
 
 pub fn query_pair(deps: Deps, asset_infos: [AssetInfo; 2]) -> StdResult<PairInfo> {
-    let pair_key = pair_key(&[asset_infos[0].to_raw(deps)?, asset_infos[1].to_raw(deps)?]);
+    let pair_key = pair_key(&[
+        asset_infos[0].to_raw(deps.api)?,
+        asset_infos[1].to_raw(deps.api)?,
+    ]);
     let pair_info: PairInfoRaw = PAIRS.load(deps.storage, &pair_key)?;
     pair_info.to_normal(deps.api)
 }
@@ -212,7 +215,10 @@ pub fn query_pairs(
     limit: Option<u32>,
 ) -> StdResult<PairsResponse> {
     let start_after = if let Some(start_after) = start_after {
-        Some([start_after[0].to_raw(deps)?, start_after[1].to_raw(deps)?])
+        Some([
+            start_after[0].to_raw(deps.api)?,
+            start_after[1].to_raw(deps.api)?,
+        ])
     } else {
         None
     };

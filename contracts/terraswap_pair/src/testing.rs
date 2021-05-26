@@ -1063,7 +1063,7 @@ fn test_deduct() {
         },
         amount,
     })
-    .deduct_tax(deps.as_ref())
+    .deduct_tax(&deps.as_ref().querier)
     .unwrap();
 
     assert_eq!(expected_after_amount, after_amount.amount);

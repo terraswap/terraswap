@@ -37,8 +37,8 @@ pub fn instantiate(
         contract_addr: deps.api.addr_canonicalize(env.contract.address.as_str())?,
         liquidity_token: CanonicalAddr::from(vec![]),
         asset_infos: [
-            msg.asset_infos[0].to_raw(deps.as_ref())?,
-            msg.asset_infos[1].to_raw(deps.as_ref())?,
+            msg.asset_infos[0].to_raw(deps.api)?,
+            msg.asset_infos[1].to_raw(deps.api)?,
         ],
     };
 
@@ -325,8 +325,8 @@ pub fn withdraw_liquidity(
             // refund asset tokens
             refund_assets[0]
                 .clone()
-                .into_msg(deps.as_ref(), sender.clone())?,
-            refund_assets[1].clone().into_msg(deps.as_ref(), sender)?,
+                .into_msg(&deps.querier, sender.clone())?,
+            refund_assets[1].clone().into_msg(&deps.querier, sender)?,
             // burn liquidity token
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: deps
@@ -408,12 +408,12 @@ pub fn swap(
         amount: return_amount,
     };
 
-    let tax_amount = return_asset.compute_tax(deps.as_ref())?;
+    let tax_amount = return_asset.compute_tax(&deps.querier)?;
 
     // 1. send collateral token from the contract to a user
     // 2. send inactive commission to collector
     Ok(Response {
-        messages: vec![return_asset.into_msg(deps.as_ref(), to.unwrap_or(sender))?],
+        messages: vec![return_asset.into_msg(&deps.querier, to.unwrap_or(sender))?],
         attributes: vec![
             attr("action", "swap"),
             attr("offer_asset", offer_asset.info.to_string()),
