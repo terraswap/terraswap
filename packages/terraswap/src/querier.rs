@@ -3,11 +3,10 @@ use crate::factory::QueryMsg as FactoryQueryMsg;
 use crate::pair::{QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
 
 use cosmwasm_std::{
-    to_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankQuery, Binary, Coin, Querier,
+    to_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankQuery, Coin, Querier,
     QuerierWrapper, QueryRequest, StdResult, Storage, Uint128, WasmQuery,
 };
-use cosmwasm_storage::to_length_prefixed;
-use cw20::TokenInfoResponse;
+use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
 pub fn query_balance(
     querier: &QuerierWrapper,
@@ -33,37 +32,28 @@ pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdRe
 
 pub fn query_token_balance(
     querier: &QuerierWrapper,
-    api: &dyn Api,
     contract_addr: Addr,
     account_addr: Addr,
 ) -> StdResult<Uint128> {
+    let res: Cw20BalanceResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: contract_addr.to_string(),
+        msg: to_binary(&Cw20QueryMsg::Balance {
+            address: account_addr.to_string(),
+        })?,
+    }))?;
+
     // load balance form the token contract
-    Ok(querier
-        .query(&QueryRequest::Wasm(WasmQuery::Raw {
-            contract_addr: contract_addr.to_string(),
-            key: Binary::from(concat(
-                &to_length_prefixed(b"balance").to_vec(),
-                (api.addr_canonicalize(account_addr.as_str())?).as_slice(),
-            )),
-        }))
-        .unwrap_or_else(|_| Uint128::zero()))
+    Ok(res.balance)
 }
 
 pub fn query_supply(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<Uint128> {
     // load price form the oracle
-    let token_info: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Raw {
+    let token_info: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: contract_addr.to_string(),
-        key: Binary::from(to_length_prefixed(b"token_info")),
+        msg: to_binary(&Cw20QueryMsg::TokenInfo {})?,
     }))?;
 
     Ok(token_info.total_supply)
-}
-
-#[inline]
-fn concat(namespace: &[u8], key: &[u8]) -> Vec<u8> {
-    let mut k = namespace.to_vec();
-    k.extend_from_slice(key);
-    k
 }
 
 pub fn query_pair_info(

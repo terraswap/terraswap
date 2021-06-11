@@ -72,12 +72,9 @@ pub fn execute_swap_operation(
                 AssetInfo::NativeToken { denom } => {
                     query_balance(&deps.querier, env.contract.address, denom)?
                 }
-                AssetInfo::Token { contract_addr } => query_token_balance(
-                    &deps.querier,
-                    deps.api,
-                    contract_addr,
-                    env.contract.address,
-                )?,
+                AssetInfo::Token { contract_addr } => {
+                    query_token_balance(&deps.querier, contract_addr, env.contract.address)?
+                }
             };
             let offer_asset: Asset = Asset {
                 info: offer_asset_info,

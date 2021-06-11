@@ -105,10 +105,13 @@ fn provide_liquidity() {
         amount: Uint128(200u128),
     }]);
 
-    deps.querier.with_token_balances(&[(
-        &"liquidity0000".to_string(),
-        &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128(0))],
-    )]);
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128(0))],
+        ),
+        (&"asset0000".to_string(), &[]),
+    ]);
 
     let msg = InstantiateMsg {
         asset_infos: [

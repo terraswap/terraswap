@@ -21,7 +21,6 @@ fn token_balance_querier() {
         Uint128(123u128),
         query_token_balance(
             &deps.as_ref().querier,
-            deps.as_ref().api,
             Addr::unchecked("liquidity0000"),
             Addr::unchecked(MOCK_CONTRACT_ADDR),
         )
@@ -139,21 +138,13 @@ fn test_asset_info() {
 
     assert_eq!(
         token_info
-            .query_pool(
-                &deps.as_ref().querier,
-                deps.as_ref().api,
-                Addr::unchecked(MOCK_CONTRACT_ADDR)
-            )
+            .query_pool(&deps.as_ref().querier, Addr::unchecked(MOCK_CONTRACT_ADDR))
             .unwrap(),
         Uint128(123u128)
     );
     assert_eq!(
         native_token_info
-            .query_pool(
-                &deps.as_ref().querier,
-                deps.as_ref().api,
-                Addr::unchecked(MOCK_CONTRACT_ADDR)
-            )
+            .query_pool(&deps.as_ref().querier, Addr::unchecked(MOCK_CONTRACT_ADDR))
             .unwrap(),
         Uint128(123u128)
     );

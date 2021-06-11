@@ -156,15 +156,10 @@ impl AssetInfo {
             AssetInfo::Token { .. } => false,
         }
     }
-    pub fn query_pool(
-        &self,
-        querier: &QuerierWrapper,
-        api: &dyn Api,
-        pool_addr: Addr,
-    ) -> StdResult<Uint128> {
+    pub fn query_pool(&self, querier: &QuerierWrapper, pool_addr: Addr) -> StdResult<Uint128> {
         match self {
             AssetInfo::Token { contract_addr, .. } => {
-                query_token_balance(querier, api, contract_addr.clone(), pool_addr)
+                query_token_balance(querier, contract_addr.clone(), pool_addr)
             }
             AssetInfo::NativeToken { denom, .. } => {
                 query_balance(querier, pool_addr, denom.to_string())
@@ -298,11 +293,11 @@ impl PairInfoRaw {
         let info_1: AssetInfo = self.asset_infos[1].to_normal(api)?;
         Ok([
             Asset {
-                amount: info_0.query_pool(querier, api, contract_addr.clone())?,
+                amount: info_0.query_pool(querier, contract_addr.clone())?,
                 info: info_0,
             },
             Asset {
-                amount: info_1.query_pool(querier, api, contract_addr)?,
+                amount: info_1.query_pool(querier, contract_addr)?,
                 info: info_1,
             },
         ])
