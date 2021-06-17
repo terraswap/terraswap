@@ -154,7 +154,7 @@ impl WasmMockQuerier {
                                 name: "mAAPL".to_string(),
                                 symbol: "mAAPL".to_string(),
                                 decimals: 6,
-                                total_supply: total_supply,
+                                total_supply,
                             })
                             .unwrap(),
                         ))
