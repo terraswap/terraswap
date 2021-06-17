@@ -80,7 +80,7 @@ fn proper_initialization() {
         }),
     };
 
-    let _res = reply(deps.as_mut(), mock_env(), reply_msg.clone()).unwrap();
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
     // it worked, let's query the state
     let pair_info: PairInfo = query_pair_info(deps.as_ref()).unwrap();
@@ -144,7 +144,7 @@ fn provide_liquidity() {
         }),
     };
 
-    let _res = reply(deps.as_mut(), mock_env(), reply_msg.clone()).unwrap();
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
     // successfully provide liquidity for the exist pool
     let msg = ExecuteMsg::ProvideLiquidity {
@@ -541,7 +541,7 @@ fn withdraw_liquidity() {
         }),
     };
 
-    let _res = reply(deps.as_mut(), mock_env(), reply_msg.clone()).unwrap();
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
     // withdraw liquidity
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
@@ -663,7 +663,7 @@ fn try_native_to_token() {
         }),
     };
 
-    let _res = reply(deps.as_mut(), mock_env(), reply_msg.clone()).unwrap();
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
     // normal swap
     let msg = ExecuteMsg::Swap {
@@ -773,7 +773,7 @@ fn try_native_to_token() {
             contract_addr: "asset0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
-                amount: Uint128::from(expected_return_amount),
+                amount: expected_return_amount,
             })
             .unwrap(),
             send: vec![],
@@ -844,7 +844,7 @@ fn try_token_to_native() {
         }),
     };
 
-    let _res = reply(deps.as_mut(), mock_env(), reply_msg.clone()).unwrap();
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
     // unauthorized access; can not execute swap directly for token swap
     let msg = ExecuteMsg::Swap {
@@ -1054,7 +1054,7 @@ fn test_deduct() {
         &[(&"uusd".to_string(), &Uint128::from(1000000u128))],
     );
 
-    let amount = Uint128(1000_000_000u128);
+    let amount = Uint128(1_000_000_000u128);
     let expected_after_amount = std::cmp::max(
         amount.checked_sub(amount * tax_rate).unwrap(),
         amount.checked_sub(tax_cap).unwrap(),
@@ -1124,7 +1124,7 @@ fn test_query_pool() {
         }),
     };
 
-    let _res = reply(deps.as_mut(), mock_env(), reply_msg.clone()).unwrap();
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
     let res: PoolResponse = query_pool(deps.as_ref()).unwrap();
 

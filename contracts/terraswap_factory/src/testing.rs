@@ -197,7 +197,7 @@ fn reply_test() {
             &mut deps.storage,
             &TmpPairInfo {
                 asset_infos: raw_infos,
-                pair_key: pair_key.clone(),
+                pair_key,
             },
         )
         .unwrap();
@@ -227,7 +227,7 @@ fn reply_test() {
         },
     )]);
 
-    let _res = reply(deps.as_mut(), mock_env(), reply_msg.clone()).unwrap();
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
     let query_res = query(
         deps.as_ref(),
@@ -244,7 +244,7 @@ fn reply_test() {
         PairInfo {
             liquidity_token: Addr::unchecked("liquidity0000"),
             contract_addr: Addr::unchecked("pair0000"),
-            asset_infos: asset_infos.clone(),
+            asset_infos,
         }
     );
 }

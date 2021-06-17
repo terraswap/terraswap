@@ -355,7 +355,7 @@ fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
 #[test]
 fn test_invalid_operations() {
     // empty error
-    assert_eq!(true, assert_operations(&vec![]).is_err());
+    assert_eq!(true, assert_operations(&[]).is_err());
 
     // uluna output
     assert_eq!(
