@@ -34,7 +34,7 @@ pub fn instantiate(
     Ok(Response {
         messages: vec![],
         attributes: vec![],
-        submessages: vec![],
+        events: vec![],
         data: None,
     })
 }
@@ -88,7 +88,7 @@ pub fn execute_update_config(
         messages: vec![],
         attributes: vec![attr("action", "update_config")],
         data: None,
-        submessages: vec![],
+        events: vec![],
     })
 }
 
@@ -119,18 +119,16 @@ pub fn execute_create_pair(
     )?;
 
     Ok(Response {
-        messages: vec![],
         attributes: vec![
             attr("action", "create_pair"),
             attr("pair", format!("{}-{}", asset_infos[0], asset_infos[1])),
         ],
-        data: None,
-        submessages: vec![SubMsg {
+        messages: vec![SubMsg {
             id: 1,
             gas_limit: None,
             msg: WasmMsg::Instantiate {
                 code_id: config.pair_code_id,
-                send: vec![],
+                funds: vec![],
                 admin: None,
                 label: "".to_string(),
                 msg: to_binary(&PairInstantiateMsg {
@@ -141,6 +139,8 @@ pub fn execute_create_pair(
             .into(),
             reply_on: ReplyOn::Success,
         }],
+        data: None,
+        events: vec![],
     })
 }
 
@@ -169,11 +169,11 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
     Ok(Response {
         messages: vec![],
-        submessages: vec![],
         attributes: vec![
             attr("pair_contract_addr", pair_contract),
             attr("liquidity_token_addr", liquidity_token.as_str()),
         ],
+        events: vec![],
         data: None,
     })
 }

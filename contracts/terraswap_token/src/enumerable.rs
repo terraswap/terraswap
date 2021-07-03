@@ -114,14 +114,14 @@ mod tests {
 
         let info = mock_info(owner.as_ref(), &[]);
         let env = mock_env();
-        do_instantiate(deps.as_mut(), &owner, Uint128(12340000));
+        do_instantiate(deps.as_mut(), &owner, Uint128::from(12340000u128));
 
         // no allowance to start
         let allowances = query_all_allowances(deps.as_ref(), owner.clone(), None, None).unwrap();
         assert_eq!(allowances.allowances, vec![]);
 
         // set allowance with height expiration
-        let allow1 = Uint128(7777);
+        let allow1 = Uint128::from(7777u128);
         let expires = Expiration::AtHeight(5432);
         let msg = ExecuteMsg::IncreaseAllowance {
             spender: spender1.to_string(),
@@ -131,7 +131,7 @@ mod tests {
         execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
         // set allowance with no expiration
-        let allow2 = Uint128(54321);
+        let allow2 = Uint128::from(54321u128);
         let msg = ExecuteMsg::IncreaseAllowance {
             spender: spender2.to_string(),
             amount: allow2,
@@ -201,7 +201,7 @@ mod tests {
             .to_string();
         let expected_order = [acct4.clone(), acct1.clone(), acct3.clone(), acct2.clone()];
 
-        do_instantiate(deps.as_mut(), &acct1, Uint128(12340000));
+        do_instantiate(deps.as_mut(), &acct1, Uint128::from(12340000u128));
 
         // put money everywhere (to create balances)
         let info = mock_info(acct1.as_ref(), &[]);
@@ -212,7 +212,7 @@ mod tests {
             info.clone(),
             ExecuteMsg::Transfer {
                 recipient: acct2,
-                amount: Uint128(222222),
+                amount: Uint128::from(222222u128),
             },
         )
         .unwrap();
@@ -222,7 +222,7 @@ mod tests {
             info.clone(),
             ExecuteMsg::Transfer {
                 recipient: acct3,
-                amount: Uint128(333333),
+                amount: Uint128::from(333333u128),
             },
         )
         .unwrap();
@@ -232,7 +232,7 @@ mod tests {
             info,
             ExecuteMsg::Transfer {
                 recipient: acct4,
-                amount: Uint128(444444),
+                amount: Uint128::from(444444u128),
             },
         )
         .unwrap();

@@ -45,8 +45,7 @@ pub fn instantiate(
     PAIR_INFO.save(deps.storage, &pair_info)?;
 
     Ok(Response {
-        messages: vec![],
-        submessages: vec![SubMsg {
+        messages: vec![SubMsg {
             // Create LP token
             msg: WasmMsg::Instantiate {
                 admin: None,
@@ -61,7 +60,7 @@ pub fn instantiate(
                         cap: None,
                     }),
                 })?,
-                send: vec![],
+                funds: vec![],
                 label: "".to_string(),
             }
             .into(),
@@ -70,6 +69,7 @@ pub fn instantiate(
             reply_on: ReplyOn::Success,
         }],
         attributes: vec![],
+        events: vec![],
         data: None,
     })
 }
@@ -199,8 +199,8 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
     Ok(Response {
         messages: vec![],
-        submessages: vec![],
         attributes: vec![attr("liquidity_token_addr", liquidity_token)],
+        events: vec![],
         data: None,
     })
 }
@@ -233,19 +233,19 @@ pub fn provide_liquidity(
             .expect("Wrong asset info is given"),
     ];
 
-    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut messages: Vec<SubMsg> = vec![];
     for (i, pool) in pools.iter_mut().enumerate() {
         // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
         if let AssetInfo::Token { contract_addr, .. } = &pool.info {
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            messages.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.to_string(),
                     recipient: env.contract.address.to_string(),
                     amount: deposits[i],
                 })?,
-                send: vec![],
-            }));
+                funds: vec![],
+            })));
         } else {
             // If the asset is native token, balance is already increased
             // To calculated properly we should subtract user deposit from the pool
@@ -260,7 +260,7 @@ pub fn provide_liquidity(
     let total_share = query_supply(&deps.querier, liquidity_token)?;
     let share = if total_share == Uint128::zero() {
         // Initial share = collateral amount
-        Uint128((deposits[0].u128() * deposits[1].u128()).integer_sqrt())
+        Uint128::from((deposits[0].u128() * deposits[1].u128()).integer_sqrt())
     } else {
         // min(1, 2)
         // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
@@ -274,7 +274,7 @@ pub fn provide_liquidity(
     };
 
     // mint LP token to sender
-    messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+    messages.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: deps
             .api
             .addr_humanize(&pair_info.liquidity_token)?
@@ -283,8 +283,8 @@ pub fn provide_liquidity(
             recipient: info.sender.to_string(),
             amount: share,
         })?,
-        send: vec![],
-    }));
+        funds: vec![],
+    })));
     Ok(Response {
         messages,
         attributes: vec![
@@ -292,8 +292,8 @@ pub fn provide_liquidity(
             attr("assets", format!("{}, {}", assets[0], assets[1])),
             attr("share", &share),
         ],
+        events: vec![],
         data: None,
-        submessages: vec![],
     })
 }
 
@@ -325,17 +325,19 @@ pub fn withdraw_liquidity(
             // refund asset tokens
             refund_assets[0]
                 .clone()
-                .into_msg(&deps.querier, sender.clone())?,
-            refund_assets[1].clone().into_msg(&deps.querier, sender)?,
+                .into_submsg(&deps.querier, sender.clone())?,
+            refund_assets[1]
+                .clone()
+                .into_submsg(&deps.querier, sender)?,
             // burn liquidity token
-            CosmosMsg::Wasm(WasmMsg::Execute {
+            SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: deps
                     .api
                     .addr_humanize(&pair_info.liquidity_token)?
                     .to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
-                send: vec![],
-            }),
+                funds: vec![],
+            })),
         ],
         attributes: vec![
             attr("action", "withdraw_liquidity"),
@@ -345,8 +347,8 @@ pub fn withdraw_liquidity(
                 format!("{}, {}", refund_assets[0], refund_assets[1]),
             ),
         ],
+        events: vec![],
         data: None,
-        submessages: vec![],
     })
 }
 
@@ -413,7 +415,7 @@ pub fn swap(
     // 1. send collateral token from the contract to a user
     // 2. send inactive commission to collector
     Ok(Response {
-        messages: vec![return_asset.into_msg(&deps.querier, to.unwrap_or(sender))?],
+        messages: vec![return_asset.into_submsg(&deps.querier, to.unwrap_or(sender))?],
         attributes: vec![
             attr("action", "swap"),
             attr("offer_asset", offer_asset.info.to_string()),
@@ -424,8 +426,8 @@ pub fn swap(
             attr("spread_amount", spread_amount.to_string()),
             attr("commission_amount", commission_amount.to_string()),
         ],
+        events: vec![],
         data: None,
-        submessages: vec![],
     })
 }
 
@@ -543,7 +545,7 @@ fn compute_swap(
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
-    let cp = Uint128(offer_pool.u128() * ask_pool.u128());
+    let cp = Uint128::from(offer_pool.u128() * ask_pool.u128());
     let return_amount =
         ask_pool.checked_sub(cp.multiply_ratio(1u128, offer_pool + offer_amount))?;
 
@@ -566,7 +568,7 @@ fn compute_offer_amount(
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
-    let cp = Uint128(offer_pool.u128() * ask_pool.u128());
+    let cp = Uint128::from(offer_pool.u128() * ask_pool.u128());
     let one_minus_commission =
         decimal_subtraction(Decimal::one(), Decimal::from_str(&COMMISSION_RATE).unwrap())?;
 
