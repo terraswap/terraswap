@@ -163,6 +163,7 @@ fn provide_liquidity() {
             },
         ],
         slippage_tolerance: None,
+        receiver: None,
     };
 
     let env = mock_env();
@@ -239,6 +240,7 @@ fn provide_liquidity() {
             },
         ],
         slippage_tolerance: None,
+        receiver: Some("staking0000".to_string()), // try changing receiver
     };
 
     let env = mock_env();
@@ -272,7 +274,7 @@ fn provide_liquidity() {
         &CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "liquidity0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
-                recipient: "addr0000".to_string(),
+                recipient: "staking0000".to_string(), // LP tokens sent to specified receiver
                 amount: Uint128::from(50u128),
             })
             .unwrap(),
@@ -297,6 +299,7 @@ fn provide_liquidity() {
             },
         ],
         slippage_tolerance: None,
+        receiver: None,
     };
 
     let env = mock_env();
@@ -353,6 +356,7 @@ fn provide_liquidity() {
             },
         ],
         slippage_tolerance: Some(Decimal::percent(1)),
+        receiver: None,
     };
 
     let env = mock_env();
@@ -395,6 +399,7 @@ fn provide_liquidity() {
             },
         ],
         slippage_tolerance: Some(Decimal::percent(1)),
+        receiver: None,
     };
 
     let env = mock_env();
@@ -437,6 +442,7 @@ fn provide_liquidity() {
             },
         ],
         slippage_tolerance: Some(Decimal::percent(1)),
+        receiver: None,
     };
 
     let env = mock_env();
@@ -475,6 +481,7 @@ fn provide_liquidity() {
             },
         ],
         slippage_tolerance: Some(Decimal::percent(1)),
+        receiver: None,
     };
 
     let env = mock_env();
