@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-    StdResult, WasmMsg,
+    StdResult, SubMsg, WasmMsg,
 };
 
 use crate::querier::compute_tax;
@@ -26,7 +26,7 @@ pub fn execute_swap_operation(
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    let messages: Vec<CosmosMsg<TerraMsgWrapper>> = match operation {
+    let messages: Vec<SubMsg<TerraMsgWrapper>> = match operation {
         SwapOperation::NativeSwap {
             offer_denom,
             ask_denom,
@@ -38,22 +38,22 @@ pub fn execute_swap_operation(
                 // deduct tax from the offer_coin
                 let amount =
                     amount.checked_sub(compute_tax(&deps.querier, amount, offer_denom.clone())?)?;
-                vec![create_swap_send_msg(
+                vec![SubMsg::new(create_swap_send_msg(
                     to,
                     Coin {
                         denom: offer_denom,
                         amount,
                     },
                     ask_denom,
-                )]
+                ))]
             } else {
-                vec![create_swap_msg(
+                vec![SubMsg::new(create_swap_msg(
                     Coin {
                         denom: offer_denom,
                         amount,
                     },
                     ask_denom,
-                )]
+                ))]
             }
         }
         SwapOperation::TerraSwap {
@@ -81,7 +81,7 @@ pub fn execute_swap_operation(
                 amount,
             };
 
-            vec![asset_into_swap_msg(
+            vec![asset_into_swap_submsg(
                 deps.as_ref(),
                 pair_info.contract_addr,
                 offer_asset,
@@ -93,10 +93,26 @@ pub fn execute_swap_operation(
 
     Ok(Response {
         messages,
-        submessages: vec![],
         attributes: vec![],
+        events: vec![],
         data: None,
     })
+}
+
+pub fn asset_into_swap_submsg(
+    deps: Deps,
+    pair_contract: Addr,
+    offer_asset: Asset,
+    max_spread: Option<Decimal>,
+    to: Option<String>,
+) -> StdResult<SubMsg<TerraMsgWrapper>> {
+    Ok(SubMsg::new(asset_into_swap_msg(
+        deps,
+        pair_contract,
+        offer_asset,
+        max_spread,
+        to,
+    )?))
 }
 
 pub fn asset_into_swap_msg(
@@ -117,7 +133,7 @@ pub fn asset_into_swap_msg(
 
             Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: pair_contract.to_string(),
-                send: vec![Coin { denom, amount }],
+                funds: vec![Coin { denom, amount }],
                 msg: to_binary(&PairExecuteMsg::Swap {
                     offer_asset: Asset {
                         amount,
@@ -131,7 +147,7 @@ pub fn asset_into_swap_msg(
         }
         AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addr.to_string(),
-            send: vec![],
+            funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: pair_contract.to_string(),
                 amount: offer_asset.amount,

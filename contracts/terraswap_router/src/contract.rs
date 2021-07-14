@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     entry_point, from_binary, to_binary, Addr, Api, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
+    MessageInfo, QueryRequest, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
 };
 
 use crate::operations::execute_swap_operation;
@@ -136,17 +136,21 @@ pub fn execute_swap_operations(
     // Assert the operations are properly set
     assert_operations(&operations)?;
 
+    println!("ONE");
+
     let to = if let Some(to) = to { to } else { sender };
     let target_asset_info = operations.last().unwrap().get_target_asset_info();
 
+    println!("TWO");
+
     let mut operation_index = 0;
-    let mut messages: Vec<CosmosMsg<TerraMsgWrapper>> = operations
+    let mut messages: Vec<SubMsg<TerraMsgWrapper>> = operations
         .into_iter()
         .map(|op| {
             operation_index += 1;
-            Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            Ok(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
-                send: vec![],
+                funds: vec![],
                 msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: op,
                     to: if operation_index == operations_len {
@@ -155,29 +159,35 @@ pub fn execute_swap_operations(
                         None
                     },
                 })?,
-            }))
+            })))
         })
-        .collect::<StdResult<Vec<CosmosMsg<TerraMsgWrapper>>>>()?;
+        .collect::<StdResult<Vec<SubMsg<TerraMsgWrapper>>>>()?;
+
+    println!("THREE");
 
     // Execute minimum amount assertion
     if let Some(minimum_receive) = minimum_receive {
+        println!("{:?}", target_asset_info);
         let receiver_balance = target_asset_info.query_pool(&deps.querier, to.clone())?;
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+
+        messages.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
-            send: vec![],
+            funds: vec![],
             msg: to_binary(&ExecuteMsg::AssertMinimumReceive {
                 asset_info: target_asset_info,
                 prev_balance: receiver_balance,
                 minimum_receive,
                 receiver: to.to_string(),
             })?,
-        }))
+        })))
     }
+
+    println!("FOUR");
 
     Ok(Response {
         messages,
-        submessages: vec![],
         attributes: vec![],
+        events: vec![],
         data: None,
     })
 }
@@ -355,105 +365,96 @@ fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
 #[test]
 fn test_invalid_operations() {
     // empty error
-    assert_eq!(true, assert_operations(&[]).is_err());
+    assert!(assert_operations(&[]).is_err());
 
     // uluna output
-    assert_eq!(
-        true,
-        assert_operations(&vec![
-            SwapOperation::NativeSwap {
-                offer_denom: "uusd".to_string(),
-                ask_denom: "uluna".to_string(),
+    assert!(assert_operations(&vec![
+        SwapOperation::NativeSwap {
+            offer_denom: "uusd".to_string(),
+            ask_denom: "uluna".to_string(),
+        },
+        SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::NativeToken {
+                denom: "ukrw".to_string(),
             },
-            SwapOperation::TerraSwap {
-                offer_asset_info: AssetInfo::NativeToken {
-                    denom: "ukrw".to_string(),
-                },
-                ask_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0001"),
-                },
+            ask_asset_info: AssetInfo::Token {
+                contract_addr: Addr::unchecked("asset0001"),
             },
-            SwapOperation::TerraSwap {
-                offer_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0001"),
-                },
-                ask_asset_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-            }
-        ])
-        .is_ok()
-    );
+        },
+        SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::Token {
+                contract_addr: Addr::unchecked("asset0001"),
+            },
+            ask_asset_info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+        }
+    ])
+    .is_ok());
 
     // asset0002 output
-    assert_eq!(
-        true,
-        assert_operations(&vec![
-            SwapOperation::NativeSwap {
-                offer_denom: "uusd".to_string(),
-                ask_denom: "uluna".to_string(),
+    assert!(assert_operations(&vec![
+        SwapOperation::NativeSwap {
+            offer_denom: "uusd".to_string(),
+            ask_denom: "uluna".to_string(),
+        },
+        SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::NativeToken {
+                denom: "ukrw".to_string(),
             },
-            SwapOperation::TerraSwap {
-                offer_asset_info: AssetInfo::NativeToken {
-                    denom: "ukrw".to_string(),
-                },
-                ask_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0001"),
-                },
+            ask_asset_info: AssetInfo::Token {
+                contract_addr: Addr::unchecked("asset0001"),
             },
-            SwapOperation::TerraSwap {
-                offer_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0001"),
-                },
-                ask_asset_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+        },
+        SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::Token {
+                contract_addr: Addr::unchecked("asset0001"),
             },
-            SwapOperation::TerraSwap {
-                offer_asset_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                ask_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0002"),
-                },
+            ask_asset_info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
             },
-        ])
-        .is_ok()
-    );
+        },
+        SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            ask_asset_info: AssetInfo::Token {
+                contract_addr: Addr::unchecked("asset0002"),
+            },
+        },
+    ])
+    .is_ok());
 
     // multiple output token types error
-    assert_eq!(
-        true,
-        assert_operations(&vec![
-            SwapOperation::NativeSwap {
-                offer_denom: "uusd".to_string(),
-                ask_denom: "ukrw".to_string(),
+    assert!(assert_operations(&vec![
+        SwapOperation::NativeSwap {
+            offer_denom: "uusd".to_string(),
+            ask_denom: "ukrw".to_string(),
+        },
+        SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::NativeToken {
+                denom: "ukrw".to_string(),
             },
-            SwapOperation::TerraSwap {
-                offer_asset_info: AssetInfo::NativeToken {
-                    denom: "ukrw".to_string(),
-                },
-                ask_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0001"),
-                },
+            ask_asset_info: AssetInfo::Token {
+                contract_addr: Addr::unchecked("asset0001"),
             },
-            SwapOperation::TerraSwap {
-                offer_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0001"),
-                },
-                ask_asset_info: AssetInfo::NativeToken {
-                    denom: "uaud".to_string(),
-                },
+        },
+        SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::Token {
+                contract_addr: Addr::unchecked("asset0001"),
             },
-            SwapOperation::TerraSwap {
-                offer_asset_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                ask_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0002"),
-                },
+            ask_asset_info: AssetInfo::NativeToken {
+                denom: "uaud".to_string(),
             },
-        ])
-        .is_err()
-    );
+        },
+        SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            ask_asset_info: AssetInfo::Token {
+                contract_addr: Addr::unchecked("asset0002"),
+            },
+        },
+    ])
+    .is_err());
 }

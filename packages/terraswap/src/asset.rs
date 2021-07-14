@@ -5,7 +5,7 @@ use std::fmt;
 use crate::querier::{query_balance, query_token_balance};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, MessageInfo,
-    QuerierWrapper, StdError, StdResult, Uint128, WasmMsg,
+    QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use terra_cosmwasm::TerraQuerier;
@@ -22,7 +22,7 @@ impl fmt::Display for Asset {
     }
 }
 
-static DECIMAL_FRACTION: Uint128 = Uint128(1_000_000_000_000_000_000u128);
+static DECIMAL_FRACTION: Uint128 = Uint128::new(1_000_000_000_000_000_000u128);
 
 impl Asset {
     pub fn is_native_token(&self) -> bool {
@@ -73,13 +73,17 @@ impl Asset {
                     recipient: recipient.to_string(),
                     amount,
                 })?,
-                send: vec![],
+                funds: vec![],
             })),
             AssetInfo::NativeToken { .. } => Ok(CosmosMsg::Bank(BankMsg::Send {
                 to_address: recipient.to_string(),
                 amount: vec![self.deduct_tax(querier)?],
             })),
         }
+    }
+
+    pub fn into_submsg(self, querier: &QuerierWrapper, recipient: Addr) -> StdResult<SubMsg> {
+        Ok(SubMsg::new(self.into_msg(querier, recipient)?))
     }
 
     pub fn assert_sent_native_token_balance(&self, message_info: &MessageInfo) -> StdResult<()> {

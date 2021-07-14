@@ -34,13 +34,13 @@ overflow-checks = true
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.1.0"}
-cosmwasm-std = { version = "0.14.0", features = ["iterator"] }
-cw-storage-plus = { version = "0.6.0", features = ["iterator"]}
+terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.3.0"}
+cosmwasm-std = { version = "0.15.0", features = ["iterator"] }
+cw-storage-plus = { git = "https://github.com/CosmWasm/cosmwasm-plus", branch = "v0.7.x", features = ["iterator"] } 
 schemars = "0.8.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 protobuf = { version = "2", features = ["with-bytes"] }
 
 [dev-dependencies]
-cosmwasm-schema = "0.14.0"
-cosmwasm-storage = { version = "0.14.0", features = ["iterator"] }
+cosmwasm-schema = "0.15.0"
+cosmwasm-storage = { version = "0.15.0", features = ["iterator"] }
