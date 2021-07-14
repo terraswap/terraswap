@@ -1,5 +1,4 @@
-use cosmwasm_std::{Addr, CanonicalAddr, Deps, Order, StdResult};
-use cw0::calc_range_start_human;
+use cosmwasm_std::{Addr, Api, CanonicalAddr, Deps, Order, StdResult};
 use cw20::{AllAccountsResponse, AllAllowancesResponse, AllowanceInfo};
 
 use crate::state::{ALLOWANCES, BALANCES};
@@ -8,6 +7,20 @@ use cw_storage_plus::Bound;
 // settings for pagination
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
+
+pub fn calc_range_start_human(
+    api: &dyn Api,
+    start_after: Option<Addr>,
+) -> StdResult<Option<Vec<u8>>> {
+    match start_after {
+        Some(human) => {
+            let mut v: Vec<u8> = api.addr_canonicalize(human.as_ref())?.0.into();
+            v.push(0);
+            Ok(Some(v))
+        }
+        None => Ok(None),
+    }
+}
 
 pub fn query_all_allowances(
     deps: Deps,

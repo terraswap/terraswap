@@ -695,8 +695,8 @@ fn try_native_to_token() {
     let msg_transfer = res.messages.get(0).expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
-    // 952.380953 = 20000 - 20000 * 30000 / (30000 + 1500)
-    let expected_ret_amount = Uint128::from(952_380_953u128);
+    // 952.380952 = 20000 - 20000 * 30000 / (30000 + 1500)
+    let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
         .unwrap();
@@ -740,21 +740,22 @@ fn try_native_to_token() {
         },
     )
     .unwrap();
+
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
-            < 5i128
+            < 3i128
     );
     assert!(
         (expected_commission_amount.u128() as i128
             - reverse_simulation_res.commission_amount.u128() as i128)
             .abs()
-            < 5i128
+            < 3i128
     );
     assert!(
         (expected_spread_amount.u128() as i128
             - reverse_simulation_res.spread_amount.u128() as i128)
             .abs()
-            < 5i128
+            < 3i128
     );
 
     assert_eq!(
@@ -887,8 +888,8 @@ fn try_token_to_native() {
     let msg_transfer = res.messages.get(0).expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
-    // 952.380953 = 20000 - 20000 * 30000 / (30000 + 1500)
-    let expected_ret_amount = Uint128::from(952_380_953u128);
+    // 952.380952 = 20000 - 20000 * 30000 / (30000 + 1500)
+    let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
         .unwrap();
@@ -945,19 +946,19 @@ fn try_token_to_native() {
     .unwrap();
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
-            < 5i128
+            < 3i128
     );
     assert!(
         (expected_commission_amount.u128() as i128
             - reverse_simulation_res.commission_amount.u128() as i128)
             .abs()
-            < 5i128
+            < 3i128
     );
     assert!(
         (expected_spread_amount.u128() as i128
             - reverse_simulation_res.spread_amount.u128() as i128)
             .abs()
-            < 5i128
+            < 3i128
     );
 
     assert_eq!(

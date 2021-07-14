@@ -136,12 +136,8 @@ pub fn execute_swap_operations(
     // Assert the operations are properly set
     assert_operations(&operations)?;
 
-    println!("ONE");
-
     let to = if let Some(to) = to { to } else { sender };
     let target_asset_info = operations.last().unwrap().get_target_asset_info();
-
-    println!("TWO");
 
     let mut operation_index = 0;
     let mut messages: Vec<SubMsg<TerraMsgWrapper>> = operations
@@ -163,11 +159,8 @@ pub fn execute_swap_operations(
         })
         .collect::<StdResult<Vec<SubMsg<TerraMsgWrapper>>>>()?;
 
-    println!("THREE");
-
     // Execute minimum amount assertion
     if let Some(minimum_receive) = minimum_receive {
-        println!("{:?}", target_asset_info);
         let receiver_balance = target_asset_info.query_pool(&deps.querier, to.clone())?;
 
         messages.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -181,8 +174,6 @@ pub fn execute_swap_operations(
             })?,
         })))
     }
-
-    println!("FOUR");
 
     Ok(Response {
         messages,

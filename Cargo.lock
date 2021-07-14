@@ -15,6 +15,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bigint"
+version = "4.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0e8c8a600052b52482eff2cf4d810e462fdff1f656ac1ecb6232132a1ed7def"
+dependencies = [
+ "byteorder",
+ "crunchy 0.1.6",
+]
+
+[[package]]
 name = "bitvec"
 version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -63,6 +73,18 @@ name = "const-oid"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f6b64db6932c7e49332728e3a6bd82c6b7e16016607d20923b537c3bc4c0d5f"
+
+[[package]]
+name = "cosmwasm-bignumber"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ede44333758d24b2bcdeda08d8b3b9ddd8ea22d8e9b045a12a3bfeb1dbfdea06"
+dependencies = [
+ "bigint",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+]
 
 [[package]]
 name = "cosmwasm-crypto"
@@ -130,6 +152,12 @@ checksum = "8aebca1129a03dc6dc2b127edd729435bbc4a37e1d5f4d7513165089ceb02634"
 
 [[package]]
 name = "crunchy"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2f4a431c5c9f662e1200b7c7f02c34e91361150e382089a8f2dec3ba680cbda"
+
+[[package]]
+name = "crunchy"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
@@ -160,7 +188,8 @@ dependencies = [
 [[package]]
 name = "cw-storage-plus"
 version = "0.7.0"
-source = "git+https://github.com/CosmWasm/cosmwasm-plus?branch=v0.7.x#c48a3d03476975cf69b0033a2a68fd7344b75988"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62b1ea5dd8d8cc57e52190d7c69ade5383d3c37291abab3917dafce77b75ced5"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -170,7 +199,8 @@ dependencies = [
 [[package]]
 name = "cw0"
 version = "0.7.0"
-source = "git+https://github.com/CosmWasm/cosmwasm-plus?branch=v0.7.x#c48a3d03476975cf69b0033a2a68fd7344b75988"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7ebb9db14a7e5f3e728e365153b94f6cbde66852acbf47c897a5d6e647737f9"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -181,7 +211,8 @@ dependencies = [
 [[package]]
 name = "cw2"
 version = "0.7.0"
-source = "git+https://github.com/CosmWasm/cosmwasm-plus?branch=v0.7.x#c48a3d03476975cf69b0033a2a68fd7344b75988"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e638c86268e6b58bb7464c70b38abc4da19d31f64bb71efe0ac93bd8b9aeee6"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus",
@@ -192,7 +223,8 @@ dependencies = [
 [[package]]
 name = "cw20"
 version = "0.7.0"
-source = "git+https://github.com/CosmWasm/cosmwasm-plus?branch=v0.7.x#c48a3d03476975cf69b0033a2a68fd7344b75988"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2499fb5a5446cf4c54c59639e15e3d6fb5994e160068e020ad9774d37f2776e8"
 dependencies = [
  "cosmwasm-std",
  "cw0",
@@ -600,6 +632,7 @@ dependencies = [
 name = "terraswap-pair"
 version = "0.0.0"
 dependencies = [
+ "cosmwasm-bignumber",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -680,7 +713,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e11fe9a9348741cf134085ad57c249508345fe16411b3d7fb4ff2da2f1d6382e"
 dependencies = [
  "byteorder",
- "crunchy",
+ "crunchy 0.2.2",
  "hex",
  "static_assertions",
 ]

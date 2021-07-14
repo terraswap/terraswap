@@ -12,6 +12,7 @@ use cosmwasm_std::{
     WasmMsg,
 };
 
+use cosmwasm_bignumber::{Decimal256, Uint256};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
@@ -393,7 +394,7 @@ pub fn swap(
 
     let offer_amount = offer_asset.amount;
     let (return_amount, spread_amount, commission_amount) =
-        compute_swap(offer_pool.amount, ask_pool.amount, offer_amount)?;
+        compute_swap(offer_pool.amount, ask_pool.amount, offer_amount);
 
     // check max spread limit if exist
     assert_max_spread(
@@ -491,7 +492,7 @@ pub fn query_simulation(
     }
 
     let (return_amount, spread_amount, commission_amount) =
-        compute_swap(offer_pool.amount, ask_pool.amount, offer_asset.amount)?;
+        compute_swap(offer_pool.amount, ask_pool.amount, offer_asset.amount);
 
     Ok(SimulationResponse {
         return_amount,
@@ -542,12 +543,14 @@ fn compute_swap(
     offer_pool: Uint128,
     ask_pool: Uint128,
     offer_amount: Uint128,
-) -> StdResult<(Uint128, Uint128, Uint128)> {
+) -> (Uint128, Uint128, Uint128) {
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
     let cp = Uint128::from(offer_pool.u128() * ask_pool.u128());
-    let return_amount =
-        ask_pool.checked_sub(cp.multiply_ratio(1u128, offer_pool + offer_amount))?;
+    let return_amount: Uint128 = ((Decimal256::from_uint256(ask_pool)
+        - Decimal256::from_ratio(Uint256::from(cp), Uint256::from(offer_pool + offer_amount)))
+        * Uint256::one())
+    .into();
 
     // calculate spread & commission
     let spread_amount: Uint128 = (offer_amount * Decimal::from_ratio(ask_pool, offer_pool))
@@ -558,7 +561,18 @@ fn compute_swap(
     // commission will be absorbed to pool
     let return_amount: Uint128 = return_amount.checked_sub(commission_amount).unwrap();
 
-    Ok((return_amount, spread_amount, commission_amount))
+    (return_amount, spread_amount, commission_amount)
+}
+
+#[test]
+fn test_compute_swap_with_huge_pool_variance() {
+    let offer_pool = Uint128::from(395451850234u128);
+    let ask_pool = Uint128::from(317u128);
+
+    assert_eq!(
+        compute_swap(offer_pool, ask_pool, Uint128::from(1u128)).0,
+        Uint128::zero()
+    );
 }
 
 fn compute_offer_amount(
@@ -566,26 +580,37 @@ fn compute_offer_amount(
     ask_pool: Uint128,
     ask_amount: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
+    let commission_rate = Decimal256::from_str(&COMMISSION_RATE).unwrap();
+
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
-    let cp = Uint128::from(offer_pool.u128() * ask_pool.u128());
-    let one_minus_commission =
-        decimal_subtraction(Decimal::one(), Decimal::from_str(&COMMISSION_RATE).unwrap())?;
+    let cp = Uint256::from(offer_pool.u128() * ask_pool.u128());
 
-    let offer_amount: Uint128 = cp
-        .multiply_ratio(
-            1u128,
-            ask_pool.checked_sub(ask_amount * reverse_decimal(one_minus_commission))?,
-        )
-        .checked_sub(offer_pool)?;
+    let one_minus_commission = Decimal256::one() - commission_rate;
+    let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
 
-    let before_commission_deduction = ask_amount * reverse_decimal(one_minus_commission);
-    let spread_amount = (offer_amount * Decimal::from_ratio(ask_pool, offer_pool))
-        .checked_sub(before_commission_deduction)
-        .unwrap_or_else(|_| Uint128::zero());
-    let commission_amount =
-        before_commission_deduction * Decimal::from_str(&COMMISSION_RATE).unwrap();
-    Ok((offer_amount, spread_amount, commission_amount))
+    let offer_amount: Uint256 = Uint256::one().multiply_ratio(
+        cp,
+        Uint256::from(ask_pool) - Uint256::from(ask_amount) * inv_one_minus_commission,
+    ) - offer_pool.into();
+
+    let before_commission_deduction: Uint256 = Uint256::from(ask_amount) * inv_one_minus_commission;
+    let before_spread_deduction: Uint256 = Uint256::from(offer_amount)
+        * Decimal256::from_ratio(Uint256::from(ask_pool), Uint256::from(offer_pool));
+
+    let spread_amount = if before_spread_deduction > before_commission_deduction {
+        before_spread_deduction - before_commission_deduction
+    } else {
+        Uint256::zero()
+    };
+
+    let commission_amount = before_commission_deduction * commission_rate;
+
+    Ok((
+        offer_amount.into(),
+        spread_amount.into(),
+        commission_amount.into(),
+    ))
 }
 
 /// If `belief_price` and `max_spread` both are given,

@@ -393,20 +393,18 @@ fn execute_swap_operation() {
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: "pair".to_string(),
                 amount: Uint128::from(1000000u128),
-                msg: Some(
-                    to_binary(&PairExecuteMsg::Swap {
-                        offer_asset: Asset {
-                            info: AssetInfo::Token {
-                                contract_addr: Addr::unchecked("asset"),
-                            },
-                            amount: Uint128::from(1000000u128),
+                msg: to_binary(&PairExecuteMsg::Swap {
+                    offer_asset: Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: Addr::unchecked("asset"),
                         },
-                        belief_price: None,
-                        max_spread: None,
-                        to: Some("addr0000".to_string()),
-                    })
-                    .unwrap()
-                )
+                        amount: Uint128::from(1000000u128),
+                    },
+                    belief_price: None,
+                    max_spread: None,
+                    to: Some("addr0000".to_string()),
+                })
+                .unwrap()
             })
             .unwrap()
         }))]

@@ -81,13 +81,13 @@ pub fn execute_swap_operation(
                 amount,
             };
 
-            vec![asset_into_swap_submsg(
+            vec![SubMsg::new(asset_into_swap_msg(
                 deps.as_ref(),
                 pair_info.contract_addr,
                 offer_asset,
                 None,
                 to,
-            )?]
+            )?)]
         }
     };
 
@@ -97,22 +97,6 @@ pub fn execute_swap_operation(
         events: vec![],
         data: None,
     })
-}
-
-pub fn asset_into_swap_submsg(
-    deps: Deps,
-    pair_contract: Addr,
-    offer_asset: Asset,
-    max_spread: Option<Decimal>,
-    to: Option<String>,
-) -> StdResult<SubMsg<TerraMsgWrapper>> {
-    Ok(SubMsg::new(asset_into_swap_msg(
-        deps,
-        pair_contract,
-        offer_asset,
-        max_spread,
-        to,
-    )?))
 }
 
 pub fn asset_into_swap_msg(
@@ -151,12 +135,12 @@ pub fn asset_into_swap_msg(
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: pair_contract.to_string(),
                 amount: offer_asset.amount,
-                msg: Some(to_binary(&PairExecuteMsg::Swap {
+                msg: to_binary(&PairExecuteMsg::Swap {
                     offer_asset,
                     belief_price: None,
                     max_spread,
                     to,
-                })?),
+                })?,
             })?,
         })),
     }
