@@ -283,7 +283,7 @@ pub fn provide_liquidity(
             .addr_humanize(&pair_info.liquidity_token)?
             .to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Mint {
-            recipient: receiver.unwrap_or(info.sender.to_string()),
+            recipient: receiver.unwrap_or_else(|| info.sender.to_string()),
             amount: share,
         })?,
         funds: vec![],
@@ -597,8 +597,8 @@ fn compute_offer_amount(
     ) - offer_pool.into();
 
     let before_commission_deduction: Uint256 = Uint256::from(ask_amount) * inv_one_minus_commission;
-    let before_spread_deduction: Uint256 = Uint256::from(offer_amount)
-        * Decimal256::from_ratio(Uint256::from(ask_pool), Uint256::from(offer_pool));
+    let before_spread_deduction: Uint256 =
+        offer_amount * Decimal256::from_ratio(Uint256::from(ask_pool), Uint256::from(offer_pool));
 
     let spread_amount = if before_spread_deduction > before_commission_deduction {
         before_spread_deduction - before_commission_deduction
