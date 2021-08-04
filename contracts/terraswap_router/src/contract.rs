@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     entry_point, from_binary, to_binary, Addr, Api, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, QueryRequest, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
+    MessageInfo, QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 
 use crate::operations::execute_swap_operation;
@@ -140,11 +140,11 @@ pub fn execute_swap_operations(
     let target_asset_info = operations.last().unwrap().get_target_asset_info();
 
     let mut operation_index = 0;
-    let mut messages: Vec<SubMsg<TerraMsgWrapper>> = operations
+    let mut messages: Vec<CosmosMsg<TerraMsgWrapper>> = operations
         .into_iter()
         .map(|op| {
             operation_index += 1;
-            Ok(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
                 funds: vec![],
                 msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
@@ -155,15 +155,15 @@ pub fn execute_swap_operations(
                         None
                     },
                 })?,
-            })))
+            }))
         })
-        .collect::<StdResult<Vec<SubMsg<TerraMsgWrapper>>>>()?;
+        .collect::<StdResult<Vec<CosmosMsg<TerraMsgWrapper>>>>()?;
 
     // Execute minimum amount assertion
     if let Some(minimum_receive) = minimum_receive {
         let receiver_balance = target_asset_info.query_pool(&deps.querier, to.clone())?;
 
-        messages.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
             msg: to_binary(&ExecuteMsg::AssertMinimumReceive {
@@ -172,15 +172,10 @@ pub fn execute_swap_operations(
                 minimum_receive,
                 receiver: to.to_string(),
             })?,
-        })))
+        }))
     }
 
-    Ok(Response {
-        messages,
-        attributes: vec![],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new().add_messages(messages))
 }
 
 fn assert_minium_receive(

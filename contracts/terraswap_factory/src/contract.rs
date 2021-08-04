@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
     StdError, StdResult, SubMsg, WasmMsg,
 };
 
@@ -31,12 +31,7 @@ pub fn instantiate(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -84,12 +79,7 @@ pub fn execute_update_config(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![attr("action", "update_config")],
-        data: None,
-        events: vec![],
-    })
+    Ok(Response::new().add_attribute("action", "update_config"))
 }
 
 // Anyone can execute it to create swap pair
@@ -118,12 +108,12 @@ pub fn execute_create_pair(
         },
     )?;
 
-    Ok(Response {
-        attributes: vec![
-            attr("action", "create_pair"),
-            attr("pair", format!("{}-{}", asset_infos[0], asset_infos[1])),
-        ],
-        messages: vec![SubMsg {
+    Ok(Response::new()
+        .add_attributes(vec![
+            ("action", "create_pair"),
+            ("pair", &format!("{}-{}", asset_infos[0], asset_infos[1])),
+        ])
+        .add_submessage(SubMsg {
             id: 1,
             gas_limit: None,
             msg: WasmMsg::Instantiate {
@@ -138,10 +128,7 @@ pub fn execute_create_pair(
             }
             .into(),
             reply_on: ReplyOn::Success,
-        }],
-        data: None,
-        events: vec![],
-    })
+        }))
 }
 
 /// This just stores the result for future query
@@ -167,15 +154,10 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
         },
     )?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("pair_contract_addr", pair_contract),
-            attr("liquidity_token_addr", liquidity_token.as_str()),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new().add_attributes(vec![
+        ("pair_contract_addr", pair_contract),
+        ("liquidity_token_addr", liquidity_token.as_str()),
+    ]))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

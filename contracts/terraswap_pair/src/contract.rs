@@ -7,9 +7,8 @@ use crate::state::PAIR_INFO;
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps,
-    DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128,
-    WasmMsg,
+    from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut,
+    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
@@ -24,6 +23,8 @@ use terraswap::pair::{
 };
 use terraswap::querier::query_supply;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
+
+const INSTANTIATE_REPLY_ID: u64 = 1;
 
 /// Commission rate == 0.3%
 const COMMISSION_RATE: &str = "0.003";
@@ -45,34 +46,29 @@ pub fn instantiate(
 
     PAIR_INFO.save(deps.storage, &pair_info)?;
 
-    Ok(Response {
-        messages: vec![SubMsg {
-            // Create LP token
-            msg: WasmMsg::Instantiate {
-                admin: None,
-                code_id: msg.token_code_id,
-                msg: to_binary(&TokenInstantiateMsg {
-                    name: "terraswap liquidity token".to_string(),
-                    symbol: "uLP".to_string(),
-                    decimals: 6,
-                    initial_balances: vec![],
-                    mint: Some(MinterResponse {
-                        minter: env.contract.address.to_string(),
-                        cap: None,
-                    }),
-                })?,
-                funds: vec![],
-                label: "".to_string(),
-            }
-            .into(),
-            gas_limit: None,
-            id: 1,
-            reply_on: ReplyOn::Success,
-        }],
-        attributes: vec![],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new().add_submessage(SubMsg {
+        // Create LP token
+        msg: WasmMsg::Instantiate {
+            admin: None,
+            code_id: msg.token_code_id,
+            msg: to_binary(&TokenInstantiateMsg {
+                name: "terraswap liquidity token".to_string(),
+                symbol: "uLP".to_string(),
+                decimals: 6,
+                initial_balances: vec![],
+                mint: Some(MinterResponse {
+                    minter: env.contract.address.to_string(),
+                    cap: None,
+                }),
+            })?,
+            funds: vec![],
+            label: "".to_string(),
+        }
+        .into(),
+        gas_limit: None,
+        id: INSTANTIATE_REPLY_ID,
+        reply_on: ReplyOn::Success,
+    }))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -198,12 +194,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
         Ok(meta)
     })?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![attr("liquidity_token_addr", liquidity_token)],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new().add_attribute("liquidity_token_addr", liquidity_token))
 }
 
 /// CONTRACT - should approve contract to use the amount of token
@@ -234,11 +225,11 @@ pub fn provide_liquidity(
             .expect("Wrong asset info is given"),
     ];
 
-    let mut messages: Vec<SubMsg> = vec![];
+    let mut messages: Vec<CosmosMsg> = vec![];
     for (i, pool) in pools.iter_mut().enumerate() {
         // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
         if let AssetInfo::Token { contract_addr, .. } = &pool.info {
-            messages.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.to_string(),
@@ -246,7 +237,7 @@ pub fn provide_liquidity(
                     amount: deposits[i],
                 })?,
                 funds: vec![],
-            })));
+            }));
         } else {
             // If the asset is native token, balance is already increased
             // To calculated properly we should subtract user deposit from the pool
@@ -275,7 +266,7 @@ pub fn provide_liquidity(
     };
 
     // mint LP token to sender
-    messages.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+    messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: deps
             .api
             .addr_humanize(&pair_info.liquidity_token)?
@@ -285,17 +276,13 @@ pub fn provide_liquidity(
             amount: share,
         })?,
         funds: vec![],
-    })));
-    Ok(Response {
-        messages,
-        attributes: vec![
-            attr("action", "provide_liquidity"),
-            attr("assets", format!("{}, {}", assets[0], assets[1])),
-            attr("share", &share),
-        ],
-        events: vec![],
-        data: None,
-    })
+    }));
+
+    Ok(Response::new().add_messages(messages).add_attributes(vec![
+        ("action", "provide_liquidity"),
+        ("assets", &format!("{}, {}", assets[0], assets[1])),
+        ("share", &share.to_string()),
+    ]))
 }
 
 pub fn withdraw_liquidity(
@@ -321,36 +308,30 @@ pub fn withdraw_liquidity(
         .collect();
 
     // update pool info
-    Ok(Response {
-        messages: vec![
-            // refund asset tokens
+    Ok(Response::new()
+        .add_messages(vec![
             refund_assets[0]
                 .clone()
-                .into_submsg(&deps.querier, sender.clone())?,
-            refund_assets[1]
-                .clone()
-                .into_submsg(&deps.querier, sender)?,
+                .into_msg(&deps.querier, sender.clone())?,
+            refund_assets[1].clone().into_msg(&deps.querier, sender)?,
             // burn liquidity token
-            SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: deps
                     .api
                     .addr_humanize(&pair_info.liquidity_token)?
                     .to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
                 funds: vec![],
-            })),
-        ],
-        attributes: vec![
-            attr("action", "withdraw_liquidity"),
-            attr("withdrawn_share", &amount.to_string()),
-            attr(
+            }),
+        ])
+        .add_attributes(vec![
+            ("action", "withdraw_liquidity"),
+            ("withdrawn_share", &amount.to_string()),
+            (
                 "refund_assets",
-                format!("{}, {}", refund_assets[0], refund_assets[1]),
+                &format!("{}, {}", refund_assets[0], refund_assets[1]),
             ),
-        ],
-        events: vec![],
-        data: None,
-    })
+        ]))
 }
 
 // CONTRACT - a user must do token approval
@@ -415,21 +396,18 @@ pub fn swap(
 
     // 1. send collateral token from the contract to a user
     // 2. send inactive commission to collector
-    Ok(Response {
-        messages: vec![return_asset.into_submsg(&deps.querier, to.unwrap_or(sender))?],
-        attributes: vec![
-            attr("action", "swap"),
-            attr("offer_asset", offer_asset.info.to_string()),
-            attr("ask_asset", ask_pool.info.to_string()),
-            attr("offer_amount", offer_amount.to_string()),
-            attr("return_amount", return_amount.to_string()),
-            attr("tax_amount", tax_amount.to_string()),
-            attr("spread_amount", spread_amount.to_string()),
-            attr("commission_amount", commission_amount.to_string()),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_message(return_asset.into_msg(&deps.querier, to.unwrap_or(sender))?)
+        .add_attributes(vec![
+            ("action", "swap"),
+            ("offer_asset", &offer_asset.info.to_string()),
+            ("ask_asset", &ask_pool.info.to_string()),
+            ("offer_amount", &offer_amount.to_string()),
+            ("return_amount", &return_amount.to_string()),
+            ("tax_amount", &tax_amount.to_string()),
+            ("spread_amount", &spread_amount.to_string()),
+            ("commission_amount", &commission_amount.to_string()),
+        ]))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
