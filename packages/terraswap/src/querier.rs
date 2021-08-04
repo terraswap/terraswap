@@ -3,8 +3,8 @@ use crate::factory::QueryMsg as FactoryQueryMsg;
 use crate::pair::{QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
 
 use cosmwasm_std::{
-    to_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankQuery, Coin, Querier,
-    QuerierWrapper, QueryRequest, StdResult, Storage, Uint128, WasmQuery,
+    to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, QuerierWrapper,
+    QueryRequest, StdResult, Uint128, WasmQuery,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
@@ -82,7 +82,7 @@ pub fn simulate(
     }))
 }
 
-pub fn reverse_simulate<S: Storage, A: Api, Q: Querier>(
+pub fn reverse_simulate(
     querier: &QuerierWrapper,
     pair_contract: Addr,
     ask_asset: &Asset,

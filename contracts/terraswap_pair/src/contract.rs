@@ -83,7 +83,8 @@ pub fn execute(
         ExecuteMsg::ProvideLiquidity {
             assets,
             slippage_tolerance,
-        } => provide_liquidity(deps, env, info, assets, slippage_tolerance),
+            receiver,
+        } => provide_liquidity(deps, env, info, assets, slippage_tolerance, receiver),
         ExecuteMsg::Swap {
             offer_asset,
             belief_price,
@@ -204,6 +205,7 @@ pub fn provide_liquidity(
     info: MessageInfo,
     assets: [Asset; 2],
     slippage_tolerance: Option<Decimal>,
+    receiver: Option<String>,
 ) -> Result<Response, ContractError> {
     for asset in assets.iter() {
         asset.assert_sent_native_token_balance(&info)?;
@@ -272,7 +274,7 @@ pub fn provide_liquidity(
             .addr_humanize(&pair_info.liquidity_token)?
             .to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Mint {
-            recipient: info.sender.to_string(),
+            recipient: receiver.unwrap_or_else(|| info.sender.to_string()),
             amount: share,
         })?,
         funds: vec![],
@@ -573,8 +575,8 @@ fn compute_offer_amount(
     ) - offer_pool.into();
 
     let before_commission_deduction: Uint256 = Uint256::from(ask_amount) * inv_one_minus_commission;
-    let before_spread_deduction: Uint256 = Uint256::from(offer_amount)
-        * Decimal256::from_ratio(Uint256::from(ask_pool), Uint256::from(offer_pool));
+    let before_spread_deduction: Uint256 =
+        offer_amount * Decimal256::from_ratio(Uint256::from(ask_pool), Uint256::from(offer_pool));
 
     let spread_amount = if before_spread_deduction > before_commission_deduction {
         before_spread_deduction - before_commission_deduction
