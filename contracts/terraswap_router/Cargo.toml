@@ -34,11 +34,11 @@ overflow-checks = true
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cw20 = { version = "0.8.0-rc2" } 
+cw20 = { version = "0.8.0" } 
 cosmwasm-std = { version = "0.16.0" }
-terraswap = { path = "../../packages/terraswap", version = "2.4.0-rc2" }
+terraswap = { path = "../../packages/terraswap", version = "2.4.0" }
 terra-cosmwasm = "2.2.0"
-cw-storage-plus = { version = "0.8.0-rc2"}
+cw-storage-plus = { version = "0.8.0"}
 integer-sqrt = "0.1.5"
 schemars = "0.8.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }

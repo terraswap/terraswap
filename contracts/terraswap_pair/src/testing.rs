@@ -8,8 +8,8 @@ use crate::mock_querier::mock_dependencies;
 
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, Addr, BankMsg, Coin, ContractResult, CosmosMsg, Decimal, Reply, ReplyOn,
-    Response, StdError, SubMsg, SubMsgExecutionResponse, Uint128, WasmMsg,
+    attr, to_binary, BankMsg, Coin, ContractResult, CosmosMsg, Decimal, Reply, ReplyOn, Response,
+    StdError, SubMsg, SubMsgExecutionResponse, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
@@ -29,7 +29,7 @@ fn proper_initialization() {
                 denom: "uusd".to_string(),
             },
             AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
         ],
         token_code_id: 10u64,
@@ -92,7 +92,7 @@ fn proper_initialization() {
                 denom: "uusd".to_string(),
             },
             AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000")
+                contract_addr: "asset0000".to_string()
             }
         ]
     );
@@ -119,7 +119,7 @@ fn provide_liquidity() {
                 denom: "uusd".to_string(),
             },
             AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
         ],
         token_code_id: 10u64,
@@ -151,7 +151,7 @@ fn provide_liquidity() {
         assets: [
             Asset {
                 info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000".to_string()),
+                    contract_addr: "asset0000".to_string(),
                 },
                 amount: Uint128::from(100u128),
             },
@@ -230,7 +230,7 @@ fn provide_liquidity() {
         assets: [
             Asset {
                 info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000".to_string()),
+                    contract_addr: "asset0000".to_string(),
                 },
                 amount: Uint128::from(100u128),
             },
@@ -289,7 +289,7 @@ fn provide_liquidity() {
         assets: [
             Asset {
                 info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000".to_string()),
+                    contract_addr: "asset0000".to_string(),
                 },
                 amount: Uint128::from(100u128),
             },
@@ -348,7 +348,7 @@ fn provide_liquidity() {
         assets: [
             Asset {
                 info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000".to_string()),
+                    contract_addr: "asset0000".to_string(),
                 },
                 amount: Uint128::from(98u128),
             },
@@ -391,7 +391,7 @@ fn provide_liquidity() {
         assets: [
             Asset {
                 info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000".to_string()),
+                    contract_addr: "asset0000".to_string(),
                 },
                 amount: Uint128::from(100u128),
             },
@@ -436,7 +436,7 @@ fn provide_liquidity() {
         assets: [
             Asset {
                 info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000".to_string()),
+                    contract_addr: "asset0000".to_string(),
                 },
                 amount: Uint128::from(99u128),
             },
@@ -475,7 +475,7 @@ fn provide_liquidity() {
         assets: [
             Asset {
                 info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000".to_string()),
+                    contract_addr: "asset0000".to_string(),
                 },
                 amount: Uint128::from(100u128),
             },
@@ -529,7 +529,7 @@ fn withdraw_liquidity() {
                 denom: "uusd".to_string(),
             },
             AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
         ],
         token_code_id: 10u64,
@@ -651,7 +651,7 @@ fn try_native_to_token() {
                 denom: "uusd".to_string(),
             },
             AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
         ],
         token_code_id: 10u64,
@@ -741,7 +741,7 @@ fn try_native_to_token() {
         deps.as_ref(),
         Asset {
             info: AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
             amount: expected_return_amount,
         },
@@ -830,7 +830,7 @@ fn try_token_to_native() {
                 denom: "uusd".to_string(),
             },
             AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
         ],
         token_code_id: 10u64,
@@ -861,7 +861,7 @@ fn try_token_to_native() {
     let msg = ExecuteMsg::Swap {
         offer_asset: Asset {
             info: AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
             amount: offer_amount,
         },
@@ -931,7 +931,7 @@ fn try_token_to_native() {
         Asset {
             amount: offer_amount,
             info: AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
         },
     )
@@ -1110,7 +1110,7 @@ fn test_query_pool() {
                 denom: "uusd".to_string(),
             },
             AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
         ],
         token_code_id: 10u64,
@@ -1150,7 +1150,7 @@ fn test_query_pool() {
             },
             Asset {
                 info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000"),
+                    contract_addr: "asset0000".to_string(),
                 },
                 amount: asset_1_amount
             }

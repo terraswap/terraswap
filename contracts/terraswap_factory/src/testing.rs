@@ -5,7 +5,7 @@ use crate::state::{pair_key, TmpPairInfo, TMP_PAIR_INFO};
 
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Addr, ContractResult, Reply, ReplyOn, StdError, SubMsg,
+    attr, from_binary, to_binary, ContractResult, Reply, ReplyOn, StdError, SubMsg,
     SubMsgExecutionResponse, WasmMsg,
 };
 use terraswap::asset::{AssetInfo, PairInfo};
@@ -117,10 +117,10 @@ fn create_pair() {
 
     let asset_infos = [
         AssetInfo::Token {
-            contract_addr: Addr::unchecked("asset0000"),
+            contract_addr: "asset0000".to_string(),
         },
         AssetInfo::Token {
-            contract_addr: Addr::unchecked("asset0001"),
+            contract_addr: "asset0001".to_string(),
         },
     ];
 
@@ -179,10 +179,10 @@ fn reply_test() {
 
     let asset_infos = [
         AssetInfo::Token {
-            contract_addr: Addr::unchecked("asset0000"),
+            contract_addr: "asset0000".to_string(),
         },
         AssetInfo::Token {
-            contract_addr: Addr::unchecked("asset0001"),
+            contract_addr: "asset0001".to_string(),
         },
     ];
 
@@ -222,8 +222,8 @@ fn reply_test() {
                     denom: "uusd".to_string(),
                 },
             ],
-            contract_addr: Addr::unchecked("pair0000"),
-            liquidity_token: Addr::unchecked("liquidity0000"),
+            contract_addr: "pair0000".to_string(),
+            liquidity_token: "liquidity0000".to_string(),
         },
     )]);
 
@@ -242,8 +242,8 @@ fn reply_test() {
     assert_eq!(
         pair_res,
         PairInfo {
-            liquidity_token: Addr::unchecked("liquidity0000"),
-            contract_addr: Addr::unchecked("pair0000"),
+            liquidity_token: "liquidity0000".to_string(),
+            contract_addr: "pair0000".to_string(),
             asset_infos,
         }
     );

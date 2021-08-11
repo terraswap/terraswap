@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Addr, Coin, ContractResult, Decimal, OwnedDeps, Querier,
+    from_binary, from_slice, to_binary, Coin, ContractResult, Decimal, OwnedDeps, Querier,
     QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use schemars::JsonSchema;
@@ -187,8 +187,8 @@ impl WasmMockQuerier {
                         match self.terraswap_factory_querier.pairs.get(&key) {
                             Some(v) => {
                                 SystemResult::Ok(ContractResult::from(to_binary(&PairInfo {
-                                    contract_addr: Addr::unchecked(v.clone()),
-                                    liquidity_token: Addr::unchecked("liquidity"),
+                                    contract_addr: v.clone(),
+                                    liquidity_token: "liquidity".to_string(),
                                     asset_infos: [
                                         AssetInfo::NativeToken {
                                             denom: "uusd".to_string(),

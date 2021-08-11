@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, StdError, SubMsg, Uint128, WasmMsg,
+    from_binary, to_binary, Coin, CosmosMsg, Decimal, StdError, SubMsg, Uint128, WasmMsg,
 };
 
 use crate::contract::{execute, instantiate, query};
@@ -75,12 +75,12 @@ fn execute_swap_operations() {
                     denom: "ukrw".to_string(),
                 },
                 ask_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0001"),
+                    contract_addr: "asset0001".to_string(),
                 },
             },
             SwapOperation::TerraSwap {
                 offer_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0001"),
+                    contract_addr: "asset0001".to_string(),
                 },
                 ask_asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
@@ -91,7 +91,7 @@ fn execute_swap_operations() {
                     denom: "uluna".to_string(),
                 },
                 ask_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0002"),
+                    contract_addr: "asset0002".to_string(),
                 },
             },
         ],
@@ -125,7 +125,7 @@ fn execute_swap_operations() {
                             denom: "ukrw".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked("asset0001"),
+                            contract_addr: "asset0001".to_string(),
                         },
                     },
                     to: None,
@@ -138,7 +138,7 @@ fn execute_swap_operations() {
                 msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked("asset0001"),
+                            contract_addr: "asset0001".to_string(),
                         },
                         ask_asset_info: AssetInfo::NativeToken {
                             denom: "uluna".to_string(),
@@ -157,7 +157,7 @@ fn execute_swap_operations() {
                             denom: "uluna".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked("asset0002"),
+                            contract_addr: "asset0002".to_string(),
                         },
                     },
                     to: Some("addr0000".to_string()),
@@ -169,7 +169,7 @@ fn execute_swap_operations() {
                 funds: vec![],
                 msg: to_binary(&ExecuteMsg::AssertMinimumReceive {
                     asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0002"),
+                        contract_addr: "asset0002".to_string(),
                     },
                     prev_balance: Uint128::zero(),
                     minimum_receive: Uint128::from(1000000u128),
@@ -194,12 +194,12 @@ fn execute_swap_operations() {
                         denom: "ukrw".to_string(),
                     },
                     ask_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0001"),
+                        contract_addr: "asset0001".to_string(),
                     },
                 },
                 SwapOperation::TerraSwap {
                     offer_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0001"),
+                        contract_addr: "asset0001".to_string(),
                     },
                     ask_asset_info: AssetInfo::NativeToken {
                         denom: "uluna".to_string(),
@@ -210,7 +210,7 @@ fn execute_swap_operations() {
                         denom: "uluna".to_string(),
                     },
                     ask_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0002"),
+                        contract_addr: "asset0002".to_string(),
                     },
                 },
             ],
@@ -246,7 +246,7 @@ fn execute_swap_operations() {
                             denom: "ukrw".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked("asset0001"),
+                            contract_addr: "asset0001".to_string(),
                         },
                     },
                     to: None,
@@ -259,7 +259,7 @@ fn execute_swap_operations() {
                 msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked("asset0001"),
+                            contract_addr: "asset0001".to_string(),
                         },
                         ask_asset_info: AssetInfo::NativeToken {
                             denom: "uluna".to_string(),
@@ -278,7 +278,7 @@ fn execute_swap_operations() {
                             denom: "uluna".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked("asset0002"),
+                            contract_addr: "asset0002".to_string(),
                         },
                     },
                     to: Some("addr0002".to_string()),
@@ -374,7 +374,7 @@ fn execute_swap_operation() {
     let msg = ExecuteMsg::ExecuteSwapOperation {
         operation: SwapOperation::TerraSwap {
             offer_asset_info: AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset"),
+                contract_addr: "asset".to_string(),
             },
             ask_asset_info: AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
@@ -396,7 +396,7 @@ fn execute_swap_operation() {
                 msg: to_binary(&PairExecuteMsg::Swap {
                     offer_asset: Asset {
                         info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked("asset"),
+                            contract_addr: "asset".to_string(),
                         },
                         amount: Uint128::from(1000000u128),
                     },
@@ -445,12 +445,12 @@ fn query_buy_with_routes() {
                     denom: "ukrw".to_string(),
                 },
                 ask_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000"),
+                    contract_addr: "asset0000".to_string(),
                 },
             },
             SwapOperation::TerraSwap {
                 offer_asset_info: AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000"),
+                    contract_addr: "asset0000".to_string(),
                 },
                 ask_asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
@@ -551,7 +551,7 @@ fn assert_minimum_receive_token() {
     // success
     let msg = ExecuteMsg::AssertMinimumReceive {
         asset_info: AssetInfo::Token {
-            contract_addr: Addr::unchecked("token0000"),
+            contract_addr: "token0000".to_string(),
         },
         prev_balance: Uint128::zero(),
         minimum_receive: Uint128::from(1000000u128),
@@ -562,7 +562,7 @@ fn assert_minimum_receive_token() {
     // assertion failed; native token
     let msg = ExecuteMsg::AssertMinimumReceive {
         asset_info: AssetInfo::Token {
-            contract_addr: Addr::unchecked("token0000"),
+            contract_addr: "token0000".to_string(),
         },
         prev_balance: Uint128::zero(),
         minimum_receive: Uint128::from(1000001u128),

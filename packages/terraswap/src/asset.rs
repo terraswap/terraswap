@@ -129,7 +129,7 @@ impl Asset {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AssetInfo {
-    Token { contract_addr: Addr },
+    Token { contract_addr: String },
     NativeToken { denom: String },
 }
 
@@ -160,11 +160,18 @@ impl AssetInfo {
             AssetInfo::Token { .. } => false,
         }
     }
-    pub fn query_pool(&self, querier: &QuerierWrapper, pool_addr: Addr) -> StdResult<Uint128> {
+    pub fn query_pool(
+        &self,
+        querier: &QuerierWrapper,
+        api: &dyn Api,
+        pool_addr: Addr,
+    ) -> StdResult<Uint128> {
         match self {
-            AssetInfo::Token { contract_addr, .. } => {
-                query_token_balance(querier, contract_addr.clone(), pool_addr)
-            }
+            AssetInfo::Token { contract_addr, .. } => query_token_balance(
+                querier,
+                api.addr_validate(contract_addr.as_str())?,
+                pool_addr,
+            ),
             AssetInfo::NativeToken { denom, .. } => {
                 query_balance(querier, pool_addr, denom.to_string())
             }
@@ -205,7 +212,7 @@ impl AssetRaw {
                     denom: denom.to_string(),
                 },
                 AssetInfoRaw::Token { contract_addr } => AssetInfo::Token {
-                    contract_addr: api.addr_humanize(&contract_addr)?,
+                    contract_addr: api.addr_humanize(&contract_addr)?.to_string(),
                 },
             },
             amount: self.amount,
@@ -226,7 +233,7 @@ impl AssetInfoRaw {
                 denom: denom.to_string(),
             }),
             AssetInfoRaw::Token { contract_addr } => Ok(AssetInfo::Token {
-                contract_addr: api.addr_humanize(&contract_addr)?,
+                contract_addr: api.addr_humanize(&contract_addr)?.to_string(),
             }),
         }
     }
@@ -264,8 +271,8 @@ impl AssetInfoRaw {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PairInfo {
     pub asset_infos: [AssetInfo; 2],
-    pub contract_addr: Addr,
-    pub liquidity_token: Addr,
+    pub contract_addr: String,
+    pub liquidity_token: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -278,8 +285,8 @@ pub struct PairInfoRaw {
 impl PairInfoRaw {
     pub fn to_normal(&self, api: &dyn Api) -> StdResult<PairInfo> {
         Ok(PairInfo {
-            liquidity_token: api.addr_humanize(&self.liquidity_token)?,
-            contract_addr: api.addr_humanize(&self.contract_addr)?,
+            liquidity_token: api.addr_humanize(&self.liquidity_token)?.to_string(),
+            contract_addr: api.addr_humanize(&self.contract_addr)?.to_string(),
             asset_infos: [
                 self.asset_infos[0].to_normal(api)?,
                 self.asset_infos[1].to_normal(api)?,
@@ -297,11 +304,11 @@ impl PairInfoRaw {
         let info_1: AssetInfo = self.asset_infos[1].to_normal(api)?;
         Ok([
             Asset {
-                amount: info_0.query_pool(querier, contract_addr.clone())?,
+                amount: info_0.query_pool(querier, api, contract_addr.clone())?,
                 info: info_0,
             },
             Asset {
-                amount: info_1.query_pool(querier, contract_addr)?,
+                amount: info_1.query_pool(querier, api, contract_addr)?,
                 info: info_1,
             },
         ])

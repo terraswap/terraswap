@@ -97,7 +97,7 @@ fn supply_querier() {
 #[test]
 fn test_asset_info() {
     let token_info: AssetInfo = AssetInfo::Token {
-        contract_addr: Addr::unchecked("asset0000"),
+        contract_addr: "asset0000".to_string(),
     };
     let native_token_info: AssetInfo = AssetInfo::NativeToken {
         denom: "uusd".to_string(),
@@ -106,11 +106,11 @@ fn test_asset_info() {
     assert!(!token_info.equal(&native_token_info));
 
     assert!(!token_info.equal(&AssetInfo::Token {
-        contract_addr: Addr::unchecked("asset0001"),
+        contract_addr: "asset0001".to_string(),
     }));
 
     assert!(token_info.equal(&AssetInfo::Token {
-        contract_addr: Addr::unchecked("asset0000"),
+        contract_addr: "asset0000".to_string(),
     }));
 
     assert!(native_token_info.is_native_token());
@@ -132,13 +132,21 @@ fn test_asset_info() {
 
     assert_eq!(
         token_info
-            .query_pool(&deps.as_ref().querier, Addr::unchecked(MOCK_CONTRACT_ADDR))
+            .query_pool(
+                &deps.as_ref().querier,
+                deps.as_ref().api,
+                Addr::unchecked(MOCK_CONTRACT_ADDR)
+            )
             .unwrap(),
         Uint128::from(123u128)
     );
     assert_eq!(
         native_token_info
-            .query_pool(&deps.as_ref().querier, Addr::unchecked(MOCK_CONTRACT_ADDR))
+            .query_pool(
+                &deps.as_ref().querier,
+                deps.as_ref().api,
+                Addr::unchecked(MOCK_CONTRACT_ADDR)
+            )
             .unwrap(),
         Uint128::from(123u128)
     );
@@ -169,7 +177,7 @@ fn test_asset() {
     let token_asset = Asset {
         amount: Uint128::from(123123u128),
         info: AssetInfo::Token {
-            contract_addr: Addr::unchecked("asset0000"),
+            contract_addr: "asset0000".to_string(),
         },
     };
 
@@ -239,14 +247,14 @@ fn query_terraswap_pair_contract() {
         &PairInfo {
             asset_infos: [
                 AssetInfo::Token {
-                    contract_addr: Addr::unchecked("asset0000"),
+                    contract_addr: "asset0000".to_string(),
                 },
                 AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
             ],
-            contract_addr: Addr::unchecked("pair0000"),
-            liquidity_token: Addr::unchecked("liquidity0000"),
+            contract_addr: "pair0000".to_string(),
+            liquidity_token: "liquidity0000".to_string(),
         },
     )]);
 
@@ -255,7 +263,7 @@ fn query_terraswap_pair_contract() {
         Addr::unchecked(MOCK_CONTRACT_ADDR),
         &[
             AssetInfo::Token {
-                contract_addr: Addr::unchecked("asset0000"),
+                contract_addr: "asset0000".to_string(),
             },
             AssetInfo::NativeToken {
                 denom: "uusd".to_string(),

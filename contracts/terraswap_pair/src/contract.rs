@@ -158,7 +158,9 @@ pub fn receive_cw20(
                 info,
                 Addr::unchecked(cw20_msg.sender),
                 Asset {
-                    info: AssetInfo::Token { contract_addr },
+                    info: AssetInfo::Token {
+                        contract_addr: contract_addr.to_string(),
+                    },
                     amount: cw20_msg.amount,
                 },
                 belief_price,
