@@ -269,14 +269,20 @@ pub fn provide_liquidity(
         )
     };
 
+    // prevent providing free token
+    if share.is_zero() {
+        return Err(ContractError::InvalidZeroAmount{});
+    }
+
     // mint LP token to sender
+    let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: deps
             .api
             .addr_humanize(&pair_info.liquidity_token)?
             .to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Mint {
-            recipient: receiver.unwrap_or_else(|| info.sender.to_string()),
+            recipient: receiver.to_string(),
             amount: share,
         })?,
         funds: vec![],
@@ -284,6 +290,8 @@ pub fn provide_liquidity(
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "provide_liquidity"),
+        ("sender", info.sender.as_str()),
+        ("receiver", receiver.as_str()),
         ("assets", &format!("{}, {}", assets[0], assets[1])),
         ("share", &share.to_string()),
     ]))
@@ -317,7 +325,9 @@ pub fn withdraw_liquidity(
             refund_assets[0]
                 .clone()
                 .into_msg(&deps.querier, sender.clone())?,
-            refund_assets[1].clone().into_msg(&deps.querier, sender)?,
+            refund_assets[1]
+                .clone()
+                .into_msg(&deps.querier, sender.clone())?,
             // burn liquidity token
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: deps
@@ -330,6 +340,7 @@ pub fn withdraw_liquidity(
         ])
         .add_attributes(vec![
             ("action", "withdraw_liquidity"),
+            ("sender", sender.as_str()),
             ("withdrawn_share", &amount.to_string()),
             (
                 "refund_assets",
@@ -397,13 +408,16 @@ pub fn swap(
     };
 
     let tax_amount = return_asset.compute_tax(&deps.querier)?;
+    let receiver = to.unwrap_or(sender.clone());
 
     // 1. send collateral token from the contract to a user
     // 2. send inactive commission to collector
     Ok(Response::new()
-        .add_message(return_asset.into_msg(&deps.querier, to.unwrap_or(sender))?)
+        .add_message(return_asset.into_msg(&deps.querier, receiver.clone())?)
         .add_attributes(vec![
             ("action", "swap"),
+            ("sender", sender.as_str()),
+            ("receiver", receiver.as_str()),
             ("offer_asset", &offer_asset.info.to_string()),
             ("ask_asset", &ask_pool.info.to_string()),
             ("offer_amount", &offer_amount.to_string()),
