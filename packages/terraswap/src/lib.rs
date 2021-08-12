@@ -1,6 +1,5 @@
 pub mod asset;
 pub mod factory;
-pub mod hook;
 pub mod pair;
 pub mod querier;
 pub mod router;

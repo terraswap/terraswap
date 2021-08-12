@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "InitMsg",
+  "title": "InstantiateMsg",
   "type": "object",
   "required": [
     "asset_infos",
@@ -16,17 +16,6 @@
       "maxItems": 2,
       "minItems": 2
     },
-    "init_hook": {
-      "description": "Hook for post initalization",
-      "anyOf": [
-        {
-          "$ref": "#/definitions/InitHook"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
     "token_code_id": {
       "description": "Token contract code id for initialization",
       "type": "integer",
@@ -36,6 +25,7 @@
   },
   "definitions": {
     "AssetInfo": {
+      "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
       "anyOf": [
         {
           "type": "object",
@@ -50,11 +40,12 @@
               ],
               "properties": {
                 "contract_addr": {
-                  "$ref": "#/definitions/HumanAddr"
+                  "type": "string"
                 }
               }
             }
-          }
+          },
+          "additionalProperties": false
         },
         {
           "type": "object",
@@ -73,31 +64,10 @@
                 }
               }
             }
-          }
+          },
+          "additionalProperties": false
         }
       ]
-    },
-    "Binary": {
-      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
-      "type": "string"
-    },
-    "HumanAddr": {
-      "type": "string"
-    },
-    "InitHook": {
-      "type": "object",
-      "required": [
-        "contract_addr",
-        "msg"
-      ],
-      "properties": {
-        "contract_addr": {
-          "$ref": "#/definitions/HumanAddr"
-        },
-        "msg": {
-          "$ref": "#/definitions/Binary"
-        }
-      }
     }
   }
 }

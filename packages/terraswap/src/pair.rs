@@ -2,38 +2,34 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::asset::{Asset, AssetInfo};
-use crate::hook::InitHook;
 
-use cosmwasm_std::{Decimal, HumanAddr, Uint128};
+use cosmwasm_std::{Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {
+pub struct InstantiateMsg {
     /// Asset infos
     pub asset_infos: [AssetInfo; 2],
     /// Token contract code id for initialization
     pub token_code_id: u64,
-    /// Hook for post initalization
-    pub init_hook: Option<InitHook>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
-    /// Post initize step to allow user to set controlled contract address after creating it
-    PostInitialize {},
     /// ProvideLiquidity a user provides pool liquidity
     ProvideLiquidity {
         assets: [Asset; 2],
         slippage_tolerance: Option<Decimal>,
+        receiver: Option<String>,
     },
     /// Swap an offer asset to the other
     Swap {
         offer_asset: Asset,
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
-        to: Option<HumanAddr>,
+        to: Option<String>,
     },
 }
 
@@ -44,7 +40,7 @@ pub enum Cw20HookMsg {
     Swap {
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
-        to: Option<HumanAddr>,
+        to: Option<String>,
     },
     WithdrawLiquidity {},
 }

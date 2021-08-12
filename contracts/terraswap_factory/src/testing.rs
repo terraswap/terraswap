@@ -1,207 +1,218 @@
-use cosmwasm_std::{
-    from_binary, log, to_binary, CanonicalAddr, CosmosMsg, HumanAddr, StdError, WasmMsg,
-};
-
-use crate::contract::{handle, init, query};
+use crate::contract::{execute, instantiate, query, reply};
 use crate::mock_querier::mock_dependencies;
 
-use crate::state::read_pair;
+use crate::state::{pair_key, TmpPairInfo, TMP_PAIR_INFO};
 
-use cosmwasm_std::testing::{mock_env, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::testing::{mock_env, mock_info};
+use cosmwasm_std::{
+    attr, from_binary, to_binary, ContractResult, Reply, ReplyOn, StdError, SubMsg,
+    SubMsgExecutionResponse, WasmMsg,
+};
 use terraswap::asset::{AssetInfo, PairInfo};
-use terraswap::factory::{ConfigResponse, HandleMsg, InitMsg, PairsResponse, QueryMsg};
-use terraswap::hook::InitHook;
-use terraswap::pair::InitMsg as PairInitMsg;
+use terraswap::factory::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use terraswap::pair::InstantiateMsg as PairInstantiateMsg;
 
 #[test]
 fn proper_initialization() {
-    let mut deps = mock_dependencies(20, &[]);
+    let mut deps = mock_dependencies(&[]);
 
-    let msg = InitMsg {
+    let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
-        init_hook: None,
     };
 
-    let env = mock_env("addr0000", &[]);
+    let info = mock_info("addr0000", &[]);
 
     // we can just call .unwrap() to assert this was a success
-    let _res = init(&mut deps, env, msg).unwrap();
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    let query_res = query(&deps, QueryMsg::Config {}).unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(123u64, config_res.token_code_id);
     assert_eq!(321u64, config_res.pair_code_id);
-    assert_eq!(HumanAddr::from("addr0000"), config_res.owner);
+    assert_eq!("addr0000".to_string(), config_res.owner);
 }
 
 #[test]
 fn update_config() {
-    let mut deps = mock_dependencies(20, &[]);
+    let mut deps = mock_dependencies(&[]);
 
-    let msg = InitMsg {
+    let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
-        init_hook: None,
     };
 
-    let env = mock_env("addr0000", &[]);
+    let info = mock_info("addr0000", &[]);
 
     // we can just call .unwrap() to assert this was a success
-    let _res = init(&mut deps, env, msg).unwrap();
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     // update owner
-    let env = mock_env("addr0000", &[]);
-    let msg = HandleMsg::UpdateConfig {
-        owner: Some(HumanAddr("addr0001".to_string())),
+    let info = mock_info("addr0000", &[]);
+    let msg = ExecuteMsg::UpdateConfig {
+        owner: Some("addr0001".to_string()),
         pair_code_id: None,
         token_code_id: None,
     };
 
-    let res = handle(&mut deps, env, msg).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(0, res.messages.len());
 
     // it worked, let's query the state
-    let query_res = query(&deps, QueryMsg::Config {}).unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(123u64, config_res.token_code_id);
     assert_eq!(321u64, config_res.pair_code_id);
-    assert_eq!(HumanAddr::from("addr0001"), config_res.owner);
+    assert_eq!("addr0001".to_string(), config_res.owner);
 
     // update left items
-    let env = mock_env("addr0001", &[]);
-    let msg = HandleMsg::UpdateConfig {
+    let env = mock_env();
+    let info = mock_info("addr0001", &[]);
+    let msg = ExecuteMsg::UpdateConfig {
         owner: None,
         pair_code_id: Some(100u64),
         token_code_id: Some(200u64),
     };
 
-    let res = handle(&mut deps, env, msg).unwrap();
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(0, res.messages.len());
 
     // it worked, let's query the state
-    let query_res = query(&deps, QueryMsg::Config {}).unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(200u64, config_res.token_code_id);
     assert_eq!(100u64, config_res.pair_code_id);
-    assert_eq!(HumanAddr::from("addr0001"), config_res.owner);
+    assert_eq!("addr0001".to_string(), config_res.owner);
 
-    // Unauthorzied err
-    let env = mock_env("addr0000", &[]);
-    let msg = HandleMsg::UpdateConfig {
+    // Unauthorized err
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let msg = ExecuteMsg::UpdateConfig {
         owner: None,
         pair_code_id: None,
         token_code_id: None,
     };
 
-    let res = handle(&mut deps, env, msg);
+    let res = execute(deps.as_mut(), env, info, msg);
     match res {
-        Err(StdError::Unauthorized { .. }) => {}
+        Err(StdError::GenericErr { msg, .. }) => assert_eq!(msg, "unauthorized"),
         _ => panic!("Must return unauthorized error"),
     }
 }
 
 #[test]
 fn create_pair() {
-    let mut deps = mock_dependencies(20, &[]);
+    let mut deps = mock_dependencies(&[]);
 
-    let msg = InitMsg {
+    let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
-        init_hook: None,
     };
 
-    let env = mock_env("addr0000", &[]);
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
 
     // we can just call .unwrap() to assert this was a success
-    let _res = init(&mut deps, env, msg).unwrap();
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
 
     let asset_infos = [
         AssetInfo::Token {
-            contract_addr: HumanAddr::from("asset0000"),
+            contract_addr: "asset0000".to_string(),
         },
         AssetInfo::Token {
-            contract_addr: HumanAddr::from("asset0001"),
+            contract_addr: "asset0001".to_string(),
         },
     ];
 
-    let msg = HandleMsg::CreatePair {
+    let msg = ExecuteMsg::CreatePair {
         asset_infos: asset_infos.clone(),
-        init_hook: None,
     };
 
-    let env = mock_env("addr0000", &[]);
-    let res = handle(&mut deps, env, msg).unwrap();
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
-        res.log,
+        res.attributes,
         vec![
-            log("action", "create_pair"),
-            log("pair", "asset0000-asset0001")
+            attr("action", "create_pair"),
+            attr("pair", "asset0000-asset0001")
         ]
     );
     assert_eq!(
         res.messages,
-        vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
-            msg: to_binary(&PairInitMsg {
-                asset_infos: asset_infos.clone(),
-                token_code_id: 123u64,
-                init_hook: Some(InitHook {
-                    contract_addr: HumanAddr::from(MOCK_CONTRACT_ADDR),
-                    msg: to_binary(&HandleMsg::Register {
-                        asset_infos: asset_infos.clone()
-                    })
-                    .unwrap(),
+        vec![SubMsg {
+            id: 1,
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+            msg: WasmMsg::Instantiate {
+                msg: to_binary(&PairInstantiateMsg {
+                    asset_infos: asset_infos.clone(),
+                    token_code_id: 123u64,
                 })
-            })
-            .unwrap(),
-            code_id: 321u64,
-            send: vec![],
-            label: None,
-        })]
+                .unwrap(),
+                code_id: 321u64,
+                funds: vec![],
+                label: "".to_string(),
+                admin: None,
+            }
+            .into()
+        },]
     );
 
     let raw_infos = [
-        asset_infos[0].to_raw(&deps).unwrap(),
-        asset_infos[1].to_raw(&deps).unwrap(),
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
     ];
-    let pair_info = read_pair(&deps.storage, &raw_infos).unwrap();
 
-    assert_eq!(pair_info.contract_addr, CanonicalAddr::default(),);
+    assert_eq!(
+        TMP_PAIR_INFO.load(&deps.storage).unwrap(),
+        TmpPairInfo {
+            asset_infos: raw_infos.clone(),
+            pair_key: pair_key(&raw_infos),
+        }
+    );
 }
 
 #[test]
-fn register() {
-    let mut deps = mock_dependencies(20, &[]);
-
-    let msg = InitMsg {
-        pair_code_id: 321u64,
-        token_code_id: 123u64,
-        init_hook: None,
-    };
-
-    let env = mock_env("addr0000", &[]);
-    let _res = init(&mut deps, env, msg).unwrap();
+fn reply_test() {
+    let mut deps = mock_dependencies(&[]);
 
     let asset_infos = [
         AssetInfo::Token {
-            contract_addr: HumanAddr::from("asset0000"),
+            contract_addr: "asset0000".to_string(),
         },
         AssetInfo::Token {
-            contract_addr: HumanAddr::from("asset0001"),
+            contract_addr: "asset0001".to_string(),
         },
     ];
 
-    let msg = HandleMsg::CreatePair {
-        asset_infos: asset_infos.clone(),
-        init_hook: None,
-    };
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
+    ];
 
-    let env = mock_env("addr0000", &[]);
-    let _res = handle(&mut deps, env, msg).unwrap();
+    let pair_key = pair_key(&raw_infos);
+    TMP_PAIR_INFO
+        .save(
+            &mut deps.storage,
+            &TmpPairInfo {
+                asset_infos: raw_infos,
+                pair_key,
+            },
+        )
+        .unwrap();
+
+    let reply_msg = Reply {
+        id: 1,
+        result: ContractResult::Ok(SubMsgExecutionResponse {
+            events: vec![],
+            data: Some(vec![10, 8, 112, 97, 105, 114, 48, 48, 48, 48].into()),
+        }),
+    };
 
     // register terraswap pair querier
     deps.querier.with_terraswap_pairs(&[(
-        &HumanAddr::from("pair0000"),
+        &"pair0000".to_string(),
         &PairInfo {
             asset_infos: [
                 AssetInfo::NativeToken {
@@ -211,20 +222,16 @@ fn register() {
                     denom: "uusd".to_string(),
                 },
             ],
-            contract_addr: HumanAddr::from("pair0000"),
-            liquidity_token: HumanAddr::from("liquidity0000"),
+            contract_addr: "pair0000".to_string(),
+            liquidity_token: "liquidity0000".to_string(),
         },
     )]);
 
-    let msg = HandleMsg::Register {
-        asset_infos: asset_infos.clone(),
-    };
-
-    let env = mock_env("pair0000", &[]);
-    let _res = handle(&mut deps, env, msg).unwrap();
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
     let query_res = query(
-        &deps,
+        deps.as_ref(),
+        mock_env(),
         QueryMsg::Pair {
             asset_infos: asset_infos.clone(),
         },
@@ -235,117 +242,9 @@ fn register() {
     assert_eq!(
         pair_res,
         PairInfo {
-            liquidity_token: HumanAddr::from("liquidity0000"),
-            contract_addr: HumanAddr::from("pair0000"),
-            asset_infos: asset_infos.clone(),
+            liquidity_token: "liquidity0000".to_string(),
+            contract_addr: "pair0000".to_string(),
+            asset_infos,
         }
-    );
-
-    let msg = HandleMsg::Register {
-        asset_infos: [asset_infos[1].clone(), asset_infos[0].clone()],
-    };
-
-    let env = mock_env("pair0000", &[]);
-    let res = handle(&mut deps, env, msg).unwrap_err();
-    match res {
-        StdError::GenericErr { msg, .. } => assert_eq!(msg, "Pair was already registered"),
-        _ => panic!("DO NOT ENTER HERE"),
-    }
-
-    // Store one more item to test query pairs
-    let asset_infos_2 = [
-        AssetInfo::Token {
-            contract_addr: HumanAddr::from("asset0000"),
-        },
-        AssetInfo::Token {
-            contract_addr: HumanAddr::from("asset0002"),
-        },
-    ];
-
-    let msg = HandleMsg::CreatePair {
-        asset_infos: asset_infos_2.clone(),
-        init_hook: None,
-    };
-
-    let env = mock_env("addr0000", &[]);
-    let _res = handle(&mut deps, env, msg).unwrap();
-
-    // register terraswap pair querier
-    deps.querier.with_terraswap_pairs(&[(
-        &HumanAddr::from("pair0001"),
-        &PairInfo {
-            asset_infos: [
-                AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-            ],
-            contract_addr: HumanAddr::from("pair0001"),
-            liquidity_token: HumanAddr::from("liquidity0001"),
-        },
-    )]);
-
-    let msg = HandleMsg::Register {
-        asset_infos: asset_infos_2.clone(),
-    };
-
-    let env = mock_env("pair0001", &[]);
-    let _res = handle(&mut deps, env, msg).unwrap();
-
-    let query_msg = QueryMsg::Pairs {
-        start_after: None,
-        limit: None,
-    };
-
-    let res = query(&mut deps, query_msg).unwrap();
-    let pairs_res: PairsResponse = from_binary(&res).unwrap();
-    assert_eq!(
-        pairs_res.pairs,
-        vec![
-            PairInfo {
-                liquidity_token: HumanAddr::from("liquidity0000"),
-                contract_addr: HumanAddr::from("pair0000"),
-                asset_infos: asset_infos.clone(),
-            },
-            PairInfo {
-                liquidity_token: HumanAddr::from("liquidity0001"),
-                contract_addr: HumanAddr::from("pair0001"),
-                asset_infos: asset_infos_2.clone(),
-            }
-        ]
-    );
-
-    let query_msg = QueryMsg::Pairs {
-        start_after: None,
-        limit: Some(1),
-    };
-
-    let res = query(&mut deps, query_msg).unwrap();
-    let pairs_res: PairsResponse = from_binary(&res).unwrap();
-    assert_eq!(
-        pairs_res.pairs,
-        vec![PairInfo {
-            liquidity_token: HumanAddr::from("liquidity0000"),
-            contract_addr: HumanAddr::from("pair0000"),
-            asset_infos: asset_infos.clone(),
-        }]
-    );
-
-    let query_msg = QueryMsg::Pairs {
-        start_after: Some(asset_infos.clone()),
-        limit: None,
-    };
-
-    let res = query(&mut deps, query_msg).unwrap();
-    let pairs_res: PairsResponse = from_binary(&res).unwrap();
-    assert_eq!(
-        pairs_res.pairs,
-        vec![PairInfo {
-            liquidity_token: HumanAddr::from("liquidity0001"),
-            contract_addr: HumanAddr::from("pair0001"),
-            asset_infos: asset_infos_2.clone(),
-        }]
     );
 }
