@@ -150,85 +150,83 @@ impl WasmMockQuerier {
                     panic!("DO NOT ENTER HERE")
                 }
             }
-            QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => {
-                match from_binary(&msg) {
-                    Ok(FactoryQueryMsg::Pair { asset_infos }) => {
-                        let key = asset_infos[0].to_string() + asset_infos[1].to_string().as_str();
-                        match self.terraswap_factory_querier.pairs.get(&key) {
-                            Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(&v).unwrap())),
-                            None => SystemResult::Err(SystemError::InvalidRequest {
-                                error: "No pair info exists".to_string(),
-                                request: msg.as_slice().into(),
-                            }),
-                        }
+            QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => match from_binary(msg) {
+                Ok(FactoryQueryMsg::Pair { asset_infos }) => {
+                    let key = asset_infos[0].to_string() + asset_infos[1].to_string().as_str();
+                    match self.terraswap_factory_querier.pairs.get(&key) {
+                        Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(&v).unwrap())),
+                        None => SystemResult::Err(SystemError::InvalidRequest {
+                            error: "No pair info exists".to_string(),
+                            request: msg.as_slice().into(),
+                        }),
                     }
-                    _ => match from_binary(&msg).unwrap() {
-                        Cw20QueryMsg::TokenInfo {} => {
-                            let balances: &HashMap<String, Uint128> =
-                                match self.token_querier.balances.get(contract_addr) {
-                                    Some(balances) => balances,
-                                    None => {
-                                        return SystemResult::Err(SystemError::InvalidRequest {
-                                            error: format!(
-                                                "No balance info exists for the contract {}",
-                                                contract_addr
-                                            ),
-                                            request: msg.as_slice().into(),
-                                        })
-                                    }
-                                };
-
-                            let mut total_supply = Uint128::zero();
-
-                            for balance in balances {
-                                total_supply += *balance.1;
-                            }
-
-                            SystemResult::Ok(ContractResult::Ok(
-                                to_binary(&TokenInfoResponse {
-                                    name: "mAAPL".to_string(),
-                                    symbol: "mAAPL".to_string(),
-                                    decimals: 6,
-                                    total_supply,
-                                })
-                                .unwrap(),
-                            ))
-                        }
-                        Cw20QueryMsg::Balance { address } => {
-                            let balances: &HashMap<String, Uint128> =
-                                match self.token_querier.balances.get(contract_addr) {
-                                    Some(balances) => balances,
-                                    None => {
-                                        return SystemResult::Err(SystemError::InvalidRequest {
-                                            error: format!(
-                                                "No balance info exists for the contract {}",
-                                                contract_addr
-                                            ),
-                                            request: msg.as_slice().into(),
-                                        })
-                                    }
-                                };
-
-                            let balance = match balances.get(&address) {
-                                Some(v) => *v,
+                }
+                _ => match from_binary(msg).unwrap() {
+                    Cw20QueryMsg::TokenInfo {} => {
+                        let balances: &HashMap<String, Uint128> =
+                            match self.token_querier.balances.get(contract_addr) {
+                                Some(balances) => balances,
                                 None => {
-                                    return SystemResult::Ok(ContractResult::Ok(
-                                        to_binary(&Cw20BalanceResponse {
-                                            balance: Uint128::zero(),
-                                        })
-                                        .unwrap(),
-                                    ));
+                                    return SystemResult::Err(SystemError::InvalidRequest {
+                                        error: format!(
+                                            "No balance info exists for the contract {}",
+                                            contract_addr
+                                        ),
+                                        request: msg.as_slice().into(),
+                                    })
                                 }
                             };
 
-                            SystemResult::Ok(ContractResult::Ok(
-                                to_binary(&Cw20BalanceResponse { balance }).unwrap(),
-                            ))
+                        let mut total_supply = Uint128::zero();
+
+                        for balance in balances {
+                            total_supply += *balance.1;
                         }
-                        _ => panic!("DO NOT ENTER HERE"),
-                    },
-                }
-            }
+
+                        SystemResult::Ok(ContractResult::Ok(
+                            to_binary(&TokenInfoResponse {
+                                name: "mAAPL".to_string(),
+                                symbol: "mAAPL".to_string(),
+                                decimals: 6,
+                                total_supply,
+                            })
+                            .unwrap(),
+                        ))
+                    }
+                    Cw20QueryMsg::Balance { address } => {
+                        let balances: &HashMap<String, Uint128> =
+                            match self.token_querier.balances.get(contract_addr) {
+                                Some(balances) => balances,
+                                None => {
+                                    return SystemResult::Err(SystemError::InvalidRequest {
+                                        error: format!(
+                                            "No balance info exists for the contract {}",
+                                            contract_addr
+                                        ),
+                                        request: msg.as_slice().into(),
+                                    })
+                                }
+                            };
+
+                        let balance = match balances.get(&address) {
+                            Some(v) => *v,
+                            None => {
+                                return SystemResult::Ok(ContractResult::Ok(
+                                    to_binary(&Cw20BalanceResponse {
+                                        balance: Uint128::zero(),
+                                    })
+                                    .unwrap(),
+                                ));
+                            }
+                        };
+
+                        SystemResult::Ok(ContractResult::Ok(
+                            to_binary(&Cw20BalanceResponse { balance }).unwrap(),
+                        ))
+                    }
+                    _ => panic!("DO NOT ENTER HERE"),
+                },
+            },
             _ => self.base.handle_query(request),
         }
     }

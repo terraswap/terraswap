@@ -212,7 +212,7 @@ impl AssetRaw {
                     denom: denom.to_string(),
                 },
                 AssetInfoRaw::Token { contract_addr } => AssetInfo::Token {
-                    contract_addr: api.addr_humanize(&contract_addr)?.to_string(),
+                    contract_addr: api.addr_humanize(contract_addr)?.to_string(),
                 },
             },
             amount: self.amount,
@@ -233,7 +233,7 @@ impl AssetInfoRaw {
                 denom: denom.to_string(),
             }),
             AssetInfoRaw::Token { contract_addr } => Ok(AssetInfo::Token {
-                contract_addr: api.addr_humanize(&contract_addr)?.to_string(),
+                contract_addr: api.addr_humanize(contract_addr)?.to_string(),
             }),
         }
     }

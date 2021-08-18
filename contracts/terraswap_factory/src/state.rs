@@ -26,7 +26,7 @@ pub const PAIRS: Map<&[u8], PairInfoRaw> = Map::new("pair_info");
 
 pub fn pair_key(asset_infos: &[AssetInfoRaw; 2]) -> Vec<u8> {
     let mut asset_infos = asset_infos.to_vec();
-    asset_infos.sort_by(|a, b| a.as_bytes().cmp(&b.as_bytes()));
+    asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
 
     [asset_infos[0].as_bytes(), asset_infos[1].as_bytes()].concat()
 }
@@ -57,7 +57,7 @@ pub fn read_pairs(
 fn calc_range_start(start_after: Option<[AssetInfoRaw; 2]>) -> Option<Vec<u8>> {
     start_after.map(|asset_infos| {
         let mut asset_infos = asset_infos.to_vec();
-        asset_infos.sort_by(|a, b| a.as_bytes().cmp(&b.as_bytes()));
+        asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
 
         let mut v = [asset_infos[0].as_bytes(), asset_infos[1].as_bytes()]
             .concat()
@@ -108,12 +108,12 @@ mod test {
     const PREFIX_PAIR_INFO: &[u8] = b"pair_info";
     pub fn store_pair(storage: &mut dyn Storage, data: &PairInfoRaw) -> StdResult<()> {
         let mut asset_infos = data.asset_infos.clone().to_vec();
-        asset_infos.sort_by(|a, b| a.as_bytes().cmp(&b.as_bytes()));
+        asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
 
         let mut pair_bucket: Bucket<PairInfoRaw> = bucket(storage, PREFIX_PAIR_INFO);
         pair_bucket.save(
             &[asset_infos[0].as_bytes(), asset_infos[1].as_bytes()].concat(),
-            &data,
+            data,
         )
     }
     pub fn read_pair(
@@ -121,7 +121,7 @@ mod test {
         asset_infos: &[AssetInfoRaw; 2],
     ) -> StdResult<PairInfoRaw> {
         let mut asset_infos = asset_infos.clone().to_vec();
-        asset_infos.sort_by(|a, b| a.as_bytes().cmp(&b.as_bytes()));
+        asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
 
         let pair_bucket: ReadonlyBucket<PairInfoRaw> = bucket_read(storage, PREFIX_PAIR_INFO);
         pair_bucket.load(&[asset_infos[0].as_bytes(), asset_infos[1].as_bytes()].concat())

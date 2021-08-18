@@ -44,7 +44,7 @@ pub fn instantiate(
         ],
     };
 
-    PAIR_INFO.save(deps.storage, &pair_info)?;
+    PAIR_INFO.save(deps.storage, pair_info)?;
 
     Ok(Response::new().add_submessage(SubMsg {
         // Create LP token
@@ -271,7 +271,7 @@ pub fn provide_liquidity(
 
     // prevent providing free token
     if share.is_zero() {
-        return Err(ContractError::InvalidZeroAmount{});
+        return Err(ContractError::InvalidZeroAmount {});
     }
 
     // mint LP token to sender
@@ -408,7 +408,7 @@ pub fn swap(
     };
 
     let tax_amount = return_asset.compute_tax(&deps.querier)?;
-    let receiver = to.unwrap_or(sender.clone());
+    let receiver = to.unwrap_or_else(|| sender.clone());
 
     // 1. send collateral token from the contract to a user
     // 2. send inactive commission to collector
@@ -552,7 +552,7 @@ fn compute_swap(
     let spread_amount: Uint128 = (offer_amount * Decimal::from_ratio(ask_pool, offer_pool))
         .checked_sub(return_amount)
         .unwrap_or_else(|_| Uint128::zero());
-    let commission_amount: Uint128 = return_amount * Decimal::from_str(&COMMISSION_RATE).unwrap();
+    let commission_amount: Uint128 = return_amount * Decimal::from_str(COMMISSION_RATE).unwrap();
 
     // commission will be absorbed to pool
     let return_amount: Uint128 = return_amount.checked_sub(commission_amount).unwrap();
@@ -575,8 +575,8 @@ fn compute_offer_amount(
     offer_pool: Uint128,
     ask_pool: Uint128,
     ask_amount: Uint128,
-) -> StdResult<(Uint128, Uint128, Uint128)> {
-    let commission_rate = Decimal256::from_str(&COMMISSION_RATE).unwrap();
+) -> Result<(Uint128, Uint128, Uint128), ContractError> {
+    let commission_rate = Decimal256::from_str(COMMISSION_RATE).unwrap();
 
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
@@ -601,6 +601,11 @@ fn compute_offer_amount(
     };
 
     let commission_amount = before_commission_deduction * commission_rate;
+
+    // check small amount swap
+    if spread_amount.is_zero() || commission_amount.is_zero() {
+        return Err(ContractError::TooSmallOfferAmount {});
+    }
 
     Ok((
         offer_amount.into(),

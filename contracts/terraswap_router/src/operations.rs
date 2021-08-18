@@ -127,7 +127,7 @@ pub fn asset_into_swap_msg(
             }))
         }
         AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract_addr.to_string(),
+            contract_addr,
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: pair_contract.to_string(),
