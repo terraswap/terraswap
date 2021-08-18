@@ -392,6 +392,11 @@ pub fn swap(
     let (return_amount, spread_amount, commission_amount) =
         compute_swap(offer_pool.amount, ask_pool.amount, offer_amount);
 
+    // prevent zero commission swap
+    if commission_amount.is_zero() {
+        return Err(ContractError::TooSmallOfferAmount {});
+    }
+
     // check max spread limit if exist
     assert_max_spread(
         belief_price,
@@ -489,6 +494,11 @@ pub fn query_simulation(
 
     let (return_amount, spread_amount, commission_amount) =
         compute_swap(offer_pool.amount, ask_pool.amount, offer_asset.amount);
+
+    // prevent zero commission swap
+    if commission_amount.is_zero() {
+        return Err(ContractError::TooSmallOfferAmount {});
+    }
 
     Ok(SimulationResponse {
         return_amount,
