@@ -3,7 +3,6 @@ use crate::contract::{
     query_simulation, reply,
 };
 use crate::error::ContractError;
-use crate::math::{decimal_multiplication, reverse_decimal};
 use crate::mock_querier::mock_dependencies;
 
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
@@ -620,8 +619,7 @@ fn try_native_to_token() {
     let total_share = Uint128::from(30000000000u128);
     let asset_pool_amount = Uint128::from(20000000000u128);
     let collateral_pool_amount = Uint128::from(30000000000u128);
-    let price = Decimal::from_ratio(collateral_pool_amount, asset_pool_amount);
-    let exchange_rate = reverse_decimal(price);
+    let exchange_rate: Decimal = Decimal::from_ratio(asset_pool_amount, collateral_pool_amount);
     let offer_amount = Uint128::from(1500000000u128);
 
     let mut deps = mock_dependencies(&[Coin {
@@ -800,8 +798,7 @@ fn try_token_to_native() {
     let total_share = Uint128::from(20000000000u128);
     let asset_pool_amount = Uint128::from(30000000000u128);
     let collateral_pool_amount = Uint128::from(20000000000u128);
-    let price = Decimal::from_ratio(collateral_pool_amount, asset_pool_amount);
-    let exchange_rate = decimal_multiplication(price, Decimal::one());
+    let exchange_rate = Decimal::from_ratio(collateral_pool_amount, asset_pool_amount);
     let offer_amount = Uint128::from(1500000000u128);
 
     let mut deps = mock_dependencies(&[Coin {
