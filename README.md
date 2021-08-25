@@ -12,18 +12,21 @@ Uniswap-inspired automated market-maker (AMM) protocol powered by Smart Contract
 
 * terraswap_factory
 
-Mainnet: `terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj`
-Testnet: `terra18qpjm4zkvqnpjpw0zn0tdr8gdzvt8au35v45xf`
+   Mainnet: `terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj`
+
+   Testnet: `terra18qpjm4zkvqnpjpw0zn0tdr8gdzvt8au35v45xf`
 
 * terraswap_pair
 
-Mainnet (CodeID): 4
-Testnet (CodeID): 7869
+   Mainnet (CodeID): 4
+
+   Testnet (CodeID): 7869
 
 * terraswap_token
 
-Mainnet (CodeID): 3
-Testnet (CodeID): 148
+   Mainnet (CodeID): 3
+
+   Testnet (CodeID): 148
 
 ## Running this contract
 
