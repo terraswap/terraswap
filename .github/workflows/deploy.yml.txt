@@ -16,3 +16,9 @@ steps:
     run: npm test
   - name: Build
     run: npm run build
+
+— name: Deploy to Skynet
+  uses: kwypchlo/deploy-to-skynet-action@main
+  with:
+    upload-dir: build
+    github-token: ${{ secrets.GITHUB_TOKEN }}
