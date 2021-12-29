@@ -6,19 +6,21 @@ use cosmwasm_std::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::iter::FromIterator;
 
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg};
 use terra_cosmwasm::{
     SwapResponse, TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute,
 };
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::pair::SimulationResponse;
+use terraswap::pair::{ReverseSimulationResponse, SimulationResponse};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Pair { asset_infos: [AssetInfo; 2] },
     Simulation { offer_asset: Asset },
+    ReverseSimulation { ask_asset: Asset },
 }
 
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
@@ -98,21 +100,23 @@ pub(crate) fn caps_to_map(caps: &[(&String, &Uint128)]) -> HashMap<String, Uint1
 
 #[derive(Clone, Default)]
 pub struct TerraswapFactoryQuerier {
-    pairs: HashMap<String, String>,
+    pairs: HashMap<String, PairInfo>,
 }
 
 impl TerraswapFactoryQuerier {
-    pub fn new(pairs: &[(&String, &String)]) -> Self {
+    pub fn new(pairs: &[(&String, &PairInfo)]) -> Self {
         TerraswapFactoryQuerier {
             pairs: pairs_to_map(pairs),
         }
     }
 }
 
-pub(crate) fn pairs_to_map(pairs: &[(&String, &String)]) -> HashMap<String, String> {
-    let mut pairs_map: HashMap<String, String> = HashMap::new();
+pub(crate) fn pairs_to_map(pairs: &[(&String, &PairInfo)]) -> HashMap<String, PairInfo> {
+    let mut pairs_map: HashMap<String, PairInfo> = HashMap::new();
     for (key, pair) in pairs.iter() {
-        pairs_map.insert(key.to_string(), pair.to_string());
+        let mut sort_key: Vec<char> = key.chars().collect();
+        sort_key.sort_by(|a, b| b.cmp(a));
+        pairs_map.insert(String::from_iter(sort_key.iter()), (**pair).clone());
     }
     pairs_map
 }
@@ -182,20 +186,17 @@ impl WasmMockQuerier {
             }
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => match from_binary(msg) {
                 Ok(QueryMsg::Pair { asset_infos }) => {
-                    let key = asset_infos[0].to_string() + asset_infos[1].to_string().as_str();
-                    match self.terraswap_factory_querier.pairs.get(&key) {
-                        Some(v) => SystemResult::Ok(ContractResult::from(to_binary(&PairInfo {
-                            contract_addr: v.clone(),
-                            liquidity_token: "liquidity".to_string(),
-                            asset_infos: [
-                                AssetInfo::NativeToken {
-                                    denom: "uusd".to_string(),
-                                },
-                                AssetInfo::NativeToken {
-                                    denom: "uusd".to_string(),
-                                },
-                            ],
-                        }))),
+                    let key = [asset_infos[0].to_string(), asset_infos[1].to_string()].join("");
+
+                    let mut sort_key: Vec<char> = key.chars().collect();
+                    sort_key.sort_by(|a, b| b.cmp(a));
+
+                    match self
+                        .terraswap_factory_querier
+                        .pairs
+                        .get(&String::from_iter(sort_key.iter()))
+                    {
+                        Some(v) => SystemResult::Ok(ContractResult::from(to_binary(v))),
                         None => SystemResult::Err(SystemError::InvalidRequest {
                             error: "No pair info exists".to_string(),
                             request: msg.as_slice().into(),
@@ -209,6 +210,13 @@ impl WasmMockQuerier {
                         spread_amount: Uint128::zero(),
                     })))
                 }
+                Ok(QueryMsg::ReverseSimulation { ask_asset }) => SystemResult::Ok(
+                    ContractResult::from(to_binary(&ReverseSimulationResponse {
+                        offer_amount: ask_asset.amount,
+                        commission_amount: Uint128::zero(),
+                        spread_amount: Uint128::zero(),
+                    })),
+                ),
                 _ => match from_binary(msg).unwrap() {
                     Cw20QueryMsg::Balance { address } => {
                         let balances: &HashMap<String, Uint128> =
@@ -273,7 +281,7 @@ impl WasmMockQuerier {
         self.tax_querier = TaxQuerier::new(rate, caps);
     }
 
-    pub fn with_terraswap_pairs(&mut self, pairs: &[(&String, &String)]) {
+    pub fn with_terraswap_pairs(&mut self, pairs: &[(&String, &PairInfo)]) {
         self.terraswap_factory_querier = TerraswapFactoryQuerier::new(pairs);
     }
 }

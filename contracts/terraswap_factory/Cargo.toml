@@ -34,7 +34,7 @@ overflow-checks = true
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.4.1"}
+terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.5.0"}
 cosmwasm-std = { version = "0.16.0" }
 cw-storage-plus = { version = "0.8.0" } 
 schemars = "0.8.1"
