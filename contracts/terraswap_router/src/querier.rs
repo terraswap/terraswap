@@ -1,6 +1,6 @@
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Decimal, QuerierWrapper, StdResult, Uint128};
-use std::ops::Div;
+use std::ops::Mul;
 use terra_cosmwasm::TerraQuerier;
 
 static DECIMAL_FRACTION: Uint128 = Uint128::new(1_000_000_000_000_000_000u128);
@@ -36,7 +36,7 @@ pub fn compute_reverse_tax(
     let tax_cap: Uint128 = (terra_querier.query_tax_cap(denom)?).cap;
 
     let tax: Uint128 = (std::cmp::min(
-        Uint256::from(amount).div(Decimal256::one() - Decimal256::from(tax_rate)),
+        Uint256::from(amount).mul(Decimal256::one() + Decimal256::from(tax_rate)),
         Uint256::from(amount + tax_cap),
     ) - Uint256::from(amount))
     .into();

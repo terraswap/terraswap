@@ -639,7 +639,7 @@ fn query_reverse_routes_with_from_native() {
     assert_eq!(
         res,
         SimulateSwapOperationsResponse {
-            amount: Uint128::from(1002505u128 + 1u128),
+            amount: Uint128::from(1000000u128),
         }
     );
 
