@@ -378,9 +378,6 @@ fn reverse_simulate_swap_operations(
         }
     }
 
-    // Corresponds to discard processing of reverse simulation of pair
-    offer_amount = offer_amount.checked_add(Uint128::from(1u128)).unwrap();
-
     Ok(SimulateSwapOperationsResponse {
         amount: offer_amount,
     })
