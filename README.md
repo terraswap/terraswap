@@ -31,9 +31,9 @@ Uniswap-inspired automated market-maker (AMM) protocol powered by Smart Contract
 
 * terraswap_router
 
-   Mainnet: ``
+   Mainnet: `terra19f36nz49pt0a4elfkd6x7gxxfmn3apj7emnenf`
 
-   Testnet: `terra159gx8p92c5fa5e2n9665telch43eqyps6mhjna`
+   Testnet: `terra1c58wrdkyc0ynvvxcv834kz65nfsxmw2w0pwusq`
 
 ## Running this contract
 
