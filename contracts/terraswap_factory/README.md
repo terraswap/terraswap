@@ -6,7 +6,7 @@ The factory contract can perform creation of terraswap pair contract and also be
 
 ```json
 {
-  "paid_code_id": "123",
+  "pair_code_id": "123",
   "token_code_id": "123",
   "init_hook": {
     "msg": "123",
