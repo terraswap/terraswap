@@ -654,7 +654,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap"
-version = "2.5.0"
+version = "2.5.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -701,7 +701,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-router"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-schema",

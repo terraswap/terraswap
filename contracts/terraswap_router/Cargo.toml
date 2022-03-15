@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-router"
-version = "0.0.0"
+version = "0.1.0"
 authors = ["Terraform Labs, PTE.", "DELIGHTLABS"]
 edition = "2018"
 description = "A Terraswap router contract - provides multi-step operations to facilitate single sign operation"

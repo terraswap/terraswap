@@ -1,3 +1,7 @@
+# 2.5.1
+
+* [2bfb0bb](https://github.com/terraswap/terraswap/pull/20/commits/82954c0aa289f12a3fe66df30cf1a65ce7bd4a4e) LOOP and ASTROPORT support on router
+
 # 2.5.0
 
 * [cd3cf2b](https://github.com/terraswap/terraswap/pull/30/commits/cd3cf2bb8d2438f5de4f5c1859b91fa46be85bf3) Support reverse simulate in router contract
