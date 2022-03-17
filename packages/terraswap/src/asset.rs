@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::querier::{query_balance, query_token_balance};
+use crate::querier::{query_balance, query_decimals, query_token_balance};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
@@ -174,6 +174,15 @@ impl AssetInfo {
             ),
             AssetInfo::NativeToken { denom, .. } => {
                 query_balance(querier, pool_addr, denom.to_string())
+            }
+        }
+    }
+
+    pub fn query_decimals(self, querier: &QuerierWrapper) -> StdResult<u8> {
+        match self {
+            AssetInfo::NativeToken { .. } => Ok(6u8),
+            AssetInfo::Token { contract_addr } => {
+                query_decimals(querier, Addr::unchecked(contract_addr))
             }
         }
     }

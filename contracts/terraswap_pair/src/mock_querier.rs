@@ -153,7 +153,7 @@ impl WasmMockQuerier {
                             to_binary(&TokenInfoResponse {
                                 name: "mAAPL".to_string(),
                                 symbol: "mAAPL".to_string(),
-                                decimals: 6,
+                                decimals: 8,
                                 total_supply,
                             })
                             .unwrap(),
