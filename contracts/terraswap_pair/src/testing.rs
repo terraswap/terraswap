@@ -1018,41 +1018,168 @@ fn try_token_to_native() {
 
 #[test]
 fn test_max_spread() {
+    let deps = mock_dependencies(&[]);
+    let offer_asset_info = AssetInfo::NativeToken {
+        denom: "offer_asset".to_string(),
+    };
+    let ask_asset_info = AssetInfo::NativeToken {
+        denom: "ask_asset_info".to_string(),
+    };
+
     assert_max_spread(
+        deps.as_ref(),
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200000000u128),
-        Uint128::from(989999u128),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(989999u128),
+        },
         Uint128::zero(),
     )
     .unwrap_err();
 
     assert_max_spread(
+        deps.as_ref(),
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200000000u128),
-        Uint128::from(990000u128),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(990000u128),
+        },
         Uint128::zero(),
     )
     .unwrap();
 
     assert_max_spread(
+        deps.as_ref(),
         None,
         Some(Decimal::percent(1)),
-        Uint128::zero(),
-        Uint128::from(989999u128),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::zero(),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(989999u128),
+        },
         Uint128::from(10001u128),
     )
     .unwrap_err();
 
     assert_max_spread(
+        deps.as_ref(),
         None,
         Some(Decimal::percent(1)),
-        Uint128::zero(),
-        Uint128::from(990000u128),
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::zero(),
+        },
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::from(990000u128),
+        },
         Uint128::from(10000u128),
     )
     .unwrap();
+}
+
+#[test]
+fn test_max_spread_with_diff_decimal() {
+    let token_addr = "ask_asset_info".to_string();
+
+    let mut deps = mock_dependencies(&[]);
+    deps.querier.with_token_balances(&[(
+        &token_addr,
+        &[(
+            &MOCK_CONTRACT_ADDR.to_string(),
+            &Uint128::from(10000000000u64),
+        )],
+    )]);
+    let offer_asset_info = AssetInfo::NativeToken {
+        denom: "offer_asset".to_string(),
+    };
+    let ask_asset_info = AssetInfo::Token {
+        contract_addr: token_addr.to_string(),
+    };
+
+    assert_max_spread(
+        deps.as_ref(),
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(100000000u128),
+        },
+        Uint128::zero(),
+    )
+    .unwrap();
+
+    assert_max_spread(
+        deps.as_ref(),
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::from(98999999u128),
+        },
+        Uint128::zero(),
+    )
+    .unwrap_err();
+
+    let offer_asset_info = AssetInfo::Token {
+        contract_addr: token_addr,
+    };
+    let ask_asset_info = AssetInfo::NativeToken {
+        denom: "offer_asset".to_string(),
+    };
+
+    assert_max_spread(
+        deps.as_ref(),
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(120000000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(1000000u128),
+        },
+        Uint128::zero(),
+    )
+    .unwrap();
+
+    assert_max_spread(
+        deps.as_ref(),
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::from(120000000000u128),
+        },
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::from(989999u128),
+        },
+        Uint128::zero(),
+    )
+    .unwrap_err();
 }
 
 #[test]

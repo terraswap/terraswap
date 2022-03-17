@@ -74,6 +74,17 @@ pub fn query_supply<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Uint128>
 ```
 
+### Token Decimals Querier
+
+It is token decimals querier for CW20 token contract.
+
+```rust
+pub fn query_decimals<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    contract_addr: &HumanAddr,
+) -> StdResult<u8>
+```
+
 ### Pair Info Querier
 
 It also provides the query interface to query avaliable terraswap pair contract info. Any contract can query pair info to terraswap factory contract.

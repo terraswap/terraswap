@@ -56,6 +56,15 @@ pub fn query_supply(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<
     Ok(token_info.total_supply)
 }
 
+pub fn query_decimals(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<u8> {
+    let token_info: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: contract_addr.to_string(),
+        msg: to_binary(&Cw20QueryMsg::TokenInfo {})?,
+    }))?;
+
+    Ok(token_info.decimals)
+}
+
 pub fn query_pair_info(
     querier: &QuerierWrapper,
     factory_contract: Addr,
