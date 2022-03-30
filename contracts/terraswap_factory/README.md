@@ -6,8 +6,8 @@ The factory contract can perform creation of terraswap pair contract and also be
 
 ```json
 {
-  "pair_code_id": "123",
-  "token_code_id": "123",
+  "pair_code_id": 123,
+  "token_code_id": 123,
   "init_hook": {
     "msg": "123",
     "contract_addr": "terra..."
@@ -23,8 +23,8 @@ The factory contract can perform creation of terraswap pair contract and also be
 {
   "update_config": {
     "owner": "terra...",
-    "token_id": "123",
-    "pair_code_id": "123"
+    "token_id": 123,
+    "pair_code_id": 123
   }
 }
 ```
@@ -37,7 +37,7 @@ The factory contract can perform creation of terraswap pair contract and also be
     "asset_infos": [
       {
         "token": {
-          "contract_address": "terra..."
+          "contract_addr": "terra..."
         }
       },
       {
@@ -58,7 +58,7 @@ The factory contract can perform creation of terraswap pair contract and also be
     "asset_infos": [
       {
         "token": {
-          "contract_address": "terra..."
+          "contract_addr": "terra..."
         }
       },
       {
@@ -89,7 +89,7 @@ The factory contract can perform creation of terraswap pair contract and also be
     "asset_infos": [
       {
         "token": {
-          "contract_address": "terra..."
+          "contract_addr": "terra..."
         }
       },
       {
