@@ -3,7 +3,7 @@ use crate::contract::{
     query_simulation, reply,
 };
 use crate::error::ContractError;
-use crate::mock_querier::mock_dependencies;
+use terraswap::mock_querier::mock_dependencies;
 
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{

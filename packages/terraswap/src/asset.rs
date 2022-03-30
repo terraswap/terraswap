@@ -2,7 +2,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::querier::{query_balance, query_decimals, query_token_balance};
+use crate::querier::{
+    query_active_denoms, query_balance, query_decimals, query_ibc_denom, query_supply,
+    query_token_balance,
+};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
@@ -202,6 +205,34 @@ impl AssetInfo {
                     AssetInfo::Token { .. } => false,
                     AssetInfo::NativeToken { denom, .. } => self_denom == denom,
                 }
+            }
+        }
+    }
+
+    pub fn is_validate(&self, querier: &QuerierWrapper) -> bool {
+        match self {
+            AssetInfo::NativeToken { denom } => {
+                if denom == "uluna" {
+                    return true;
+                } else if denom.starts_with('u') {
+                    let res_actives = query_active_denoms(querier);
+                    if res_actives.is_err() {
+                        return false;
+                    }
+
+                    let actives = res_actives.unwrap();
+                    let res = actives.iter().find(|active_denom| *active_denom == denom);
+                    if res != None {
+                        return true;
+                    }
+                } else if denom.starts_with("ibc") {
+                    return query_ibc_denom(querier, denom.to_string()).is_ok();
+                }
+
+                false
+            }
+            AssetInfo::Token { contract_addr } => {
+                query_supply(querier, Addr::unchecked(contract_addr)).is_ok()
             }
         }
     }
