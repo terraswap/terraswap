@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+// QueryActivesResponse is response type for the
+// Query/Actives RPC method.
+message QueryActivesResponse {
+  // actives defines a list of the denomination which oracle prices aggreed upon.
+  repeated string actives = 1;
+}
+
+// QueryDenomTraceRequest is the request type for the Query/DenomTrace RPC
+// method
+message QueryDenomTraceRequest {
+  // hash (in hex format) of the denomination trace information.
+  string hash = 1;
+}
+
+// DenomTrace contains the base denomination for ICS20 fungible tokens and the
+// source tracing information path.
+message DenomTrace {
+  // path defines the chain of port/channel identifiers used for tracing the
+  // source of the fungible token.
+  string path = 1;
+  // base denomination of the relayed fungible token.
+  string base_denom = 2;
+}
+
+// QueryDenomTraceResponse is the response type for the Query/DenomTrace RPC
+// method.
+message QueryDenomTraceResponse {
+  // denom_trace returns the requested denomination trace information.
+  DenomTrace denom_trace = 1;
+}
