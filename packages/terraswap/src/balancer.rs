@@ -6,9 +6,9 @@ use cw_storage_plus::Map;
 use crate::asset::{Asset, AssetInfo};
 
 #[derive(Clone)]
-pub struct NewCalculatedBalacedAssets<'a> {
-    pub new_virtual_pairs: Map<'a, String, Pairset>,
-    pub new_unmatched_assets: Map<'a, String, Asset>,
+pub struct NewCalculatedBalacedAssets {
+    pub new_virtual_pairs: HashMap<String, Pairset>,
+    pub new_unmatched_assets: HashMap<String, Asset>,
     pub new_reserved_asset: Asset,
     pub new_used_reserved_asset: Asset,
 }
@@ -29,17 +29,17 @@ const UUSD: &str = "uusd";
 /// 
 /// Check https://www.notion.so/delight-labs/beb67d49bdda488fb222bf56ffa9f2ed#de128f3c50cd42bcb71b17aa53429245
 /// TODO: should change the link into the official docs
-pub fn calculate_balanced_assets<'a>(
+pub fn calculate_balanced_assets(
     deps: DepsMut,
     is_provide: bool,
     asset: Asset,
-    virtual_pairs: Map<'a, String, Pairset>,
-    unmatched_assets: Map<'a, String, Asset>,
+    virtual_pairs: HashMap<String, Pairset>,
+    unmatched_assets: HashMap<String, Asset>,
     reserved_asset: Asset,
     used_reserved_asset: Asset,
-) -> StdResult<NewCalculatedBalacedAssets<'a>> {
+) -> StdResult<NewCalculatedBalacedAssets> {
     let mut temp_input_asset = asset.clone();
-    let mut res = NewCalculatedBalacedAssets::<'a> {
+    let mut res = NewCalculatedBalacedAssets {
         new_virtual_pairs: virtual_pairs.clone(),
         new_unmatched_assets: unmatched_assets.clone(),
         new_reserved_asset: reserved_asset.clone(),
@@ -68,10 +68,10 @@ pub fn calculate_balanced_assets<'a>(
         // If paid back complete, nothing to do. Done it.
         if temp_input_asset.amount == Uint128::from(0u128) { return Ok(res); }
 
-        if (is_stableleg_provide && res.new_unmatched_assets.has(deps.storage, String::from(UUSD))) || 
-            (!is_stableleg_provide && !res.new_unmatched_assets.has(deps.storage, String::from(UUSD))) {
+        if (is_stableleg_provide && res.new_unmatched_assets.contains_key(&String::from(UUSD))) || 
+            (!is_stableleg_provide && !res.new_unmatched_assets.contains_key(&String::from(UUSD))) {
             
-            res = put_unmatched_asset(deps, vec![temp_input_asset], res);
+            res = put_unmatched_asset(vec![temp_input_asset], res);
             return Ok(res);
         }
         
@@ -122,69 +122,53 @@ fn reserve_asset_process(
     (input_asset, balanced_assets_info)
 }
 
-fn put_unmatched_asset<'a>(
-    deps: DepsMut,
+fn put_unmatched_asset(
     input_assets: Vec<Asset>,
-    balanced_assets_info: NewCalculatedBalacedAssets<'a>
-) -> NewCalculatedBalacedAssets<'a> {
+    mut balanced_assets_info: NewCalculatedBalacedAssets
+) -> NewCalculatedBalacedAssets {
     for unit_asset in input_assets.iter() {
         let token_name = match &unit_asset.info {
             AssetInfo::NativeToken{ denom } => denom,
             AssetInfo::Token{ contract_addr } => contract_addr,      
         }.to_string();
 
-        balanced_assets_info.new_unmatched_assets.update(
-            deps.storage,
-            token_name,
-            |may_stored_token: Option<Asset>| -> StdResult<Asset> {
-                match may_stored_token {
-                    Some(stored_token) => {
-                        let mut new_token = stored_token.clone();
-                        new_token.amount += unit_asset.amount;
-                        Ok(new_token)
-                    },
-                    None => Ok(unit_asset.clone()),
-                }
-            }
-        ).ok();
+        let point = balanced_assets_info.new_unmatched_assets
+            .entry(token_name)
+            .or_insert(unit_asset.clone());
+
+        point.amount += unit_asset.amount;
     }
 
     balanced_assets_info
 }
 
-fn try_pairing_with_unmatched_assets<'a>(
-    deps: DepsMut<'a>,
+fn try_pairing_with_unmatched_assets(
+    deps: DepsMut,
     input_assets: Vec<Asset>,
-    balanced_assets_info: NewCalculatedBalacedAssets<'a>
-) {
-
+    balanced_assets_info: NewCalculatedBalacedAssets
+) -> NewCalculatedBalacedAssets {
+    // if input_assets.len() == 1 && input_assets.0.info
+    balanced_assets_info
 }
 
-fn calculate_weight_unmatched_assets<'a>(
-    deps: DepsMut,
-    curr_pairs: &'a Map<'a, String, Pairset>,
-    unmatched_assets: &'a Map<'a, String, Asset>
+fn calculate_weight_unmatched_assets(
+    curr_pairs: HashMap<String, Pairset>,
+    unmatched_assets: HashMap<String, Asset>
 ) -> StdResult<HashMap<String, Uint128>> {
     let mut res: HashMap<String, Uint128> = HashMap::new();
     let mut whole_portion = Uint128::from(0u128);
 
-    for may_unit_asset in unmatched_assets.range(deps.storage, None, None, Order::Ascending) {
-        match may_unit_asset {
-            Ok((_idx, unit_asset)) => {
-                let token_name = match unit_asset.info {
-                    AssetInfo::NativeToken{ denom } => denom,
-                    AssetInfo::Token{ contract_addr } => contract_addr,      
-                };
-
-                let pairset = curr_pairs.load(deps.storage, token_name.clone()).unwrap();
-                let ratio = derive_unit_ratio(pairset);
-                let portion = unit_asset.amount.checked_mul(ratio).unwrap();
-                whole_portion += portion.clone();
-
-                res.insert(token_name, ratio);
-            },
-            Err(_) => (), // TODO
+    for (token_name, unit_asset) in unmatched_assets.iter() {
+        let pairset = match curr_pairs.get(token_name) {
+            Some(pairinfo) => pairinfo,
+            None => return Err(StdError::not_found("no pair info")),
         };
+
+        let ratio = derive_unit_ratio(pairset);
+        let portion = unit_asset.amount.checked_mul(ratio).unwrap();
+        whole_portion += portion.clone();
+
+        res.insert(token_name.clone(), ratio);
     }
     
     for (_, val) in res.iter_mut() {
@@ -197,7 +181,7 @@ fn calculate_weight_unmatched_assets<'a>(
 }
 
 fn derive_unit_ratio(
-    unit_pair: Pairset
+    unit_pair: &Pairset
 ) -> Uint128 {
     // Riskleg amount * 10^6 / stableleg
     // 10^6 is already multiplied
