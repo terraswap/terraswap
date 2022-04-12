@@ -528,7 +528,7 @@ pub fn query_reverse_simulation(
     }
 
     let (offer_amount, spread_amount, commission_amount) =
-        compute_offer_amount(offer_pool.amount, ask_pool.amount, ask_asset.amount)?;
+        compute_offer_amount(offer_pool.amount, ask_pool.amount, ask_asset.amount);
 
     Ok(ReverseSimulationResponse {
         offer_amount,
@@ -591,7 +591,7 @@ fn compute_offer_amount(
     offer_pool: Uint128,
     ask_pool: Uint128,
     ask_amount: Uint128,
-) -> Result<(Uint128, Uint128, Uint128), ContractError> {
+) -> (Uint128, Uint128, Uint128) {
     let offer_pool: Uint256 = offer_pool.into();
     let ask_pool: Uint256 = ask_pool.into();
     let ask_amount: Uint256 = ask_amount.into();
@@ -621,16 +621,11 @@ fn compute_offer_amount(
 
     let commission_amount = before_commission_deduction * commission_rate;
 
-    // check small amount swap
-    if spread_amount.is_zero() || commission_amount.is_zero() {
-        return Err(ContractError::TooSmallOfferAmount {});
-    }
-
-    Ok((
+    (
         offer_amount.into(),
         spread_amount.into(),
         commission_amount.into(),
-    ))
+    )
 }
 
 /// If `belief_price` and `max_spread` both are given,
