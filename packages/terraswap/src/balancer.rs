@@ -1,8 +1,7 @@
 // Will be moved into terraswap_interface (ToBeFixed)
-use std::{str::FromStr, collections::HashMap};
+use std::{collections::{HashMap, hash_map::IterMut}};
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{Addr, DepsMut, Decimal, StdResult, Uint128, Order, StdError};
-use cw_storage_plus::Map;
+use cosmwasm_std::{StdResult, Uint128, StdError};
 use crate::asset::{Asset, AssetInfo};
 
 #[derive(Clone)]
@@ -30,7 +29,6 @@ const UUSD: &str = "uusd";
 /// Check https://www.notion.so/delight-labs/beb67d49bdda488fb222bf56ffa9f2ed#de128f3c50cd42bcb71b17aa53429245
 /// TODO: should change the link into the official docs
 pub fn calculate_balanced_assets(
-    deps: DepsMut,
     is_provide: bool,
     asset: Asset,
     virtual_pairs: HashMap<String, Pairset>,
@@ -74,34 +72,16 @@ pub fn calculate_balanced_assets(
             res = put_unmatched_asset(vec![temp_input_asset], res);
             return Ok(res);
         }
+
+        let temp_ust_in_hashmap = HashMap::from([
+            (String::from(UUSD), temp_input_asset),
+        ]);
+        res = try_pairing_with_unmatched_assets(temp_ust_in_hashmap, res);
         
     } else {
         // withdraw
     }
-    
 
-    // just template for the future
-    // not usable
-    // let mut whole_stableleg_size = Uint128::from(0u128);
-    // for may_unit_pair in virtual_pairs.range(deps.storage, None, None, Order::Ascending) {
-    //     let unit_pair = may_unit_pair.expect("Wrong asset info is given").1;
-
-    //     for unit_asset in unit_pair.asset_infos {
-    //         match unit_asset {
-    //             AssetInfo::NativeToken{ denom } => match denom.as_str() {
-    //                 // TODO: how to treat 'ukrw' + how to avoid 'uluna' & IBC tokens
-    //                 "uusd" => {
-    //                     let unit_pool_addr: Addr = deps.api.addr_validate(unit_pair.contract_addr.as_str())?;
-    //                     let uusd_amount = unit_asset.query_pool(&deps.querier, deps.api, unit_pool_addr)?;
-    //                     whole_stableleg_size += uusd_amount;
-    //                 },
-    //                 _ => (),
-    //             },
-    //             _ => (),
-    //         }
-    //     }
-    // }
-    
     return Ok(res);
 }
 
@@ -127,11 +107,7 @@ fn put_unmatched_asset(
     mut balanced_assets_info: NewCalculatedBalacedAssets
 ) -> NewCalculatedBalacedAssets {
     for unit_asset in input_assets.iter() {
-        let token_name = match &unit_asset.info {
-            AssetInfo::NativeToken{ denom } => denom,
-            AssetInfo::Token{ contract_addr } => contract_addr,      
-        }.to_string();
-
+        let token_name = get_asset_name(unit_asset.clone());
         let point = balanced_assets_info.new_unmatched_assets
             .entry(token_name)
             .or_insert(unit_asset.clone());
@@ -143,12 +119,102 @@ fn put_unmatched_asset(
 }
 
 fn try_pairing_with_unmatched_assets(
-    deps: DepsMut,
-    input_assets: Vec<Asset>,
-    balanced_assets_info: NewCalculatedBalacedAssets
+    mut input_assets: HashMap<String, Asset>,
+    mut balanced_assets_info: NewCalculatedBalacedAssets
 ) -> NewCalculatedBalacedAssets {
-    // if input_assets.len() == 1 && input_assets.0.info
+    let portions = calculate_weight_unmatched_assets(
+        balanced_assets_info.new_virtual_pairs.clone(),
+        balanced_assets_info.new_unmatched_assets.clone(),
+    ).unwrap();
+
+    if input_assets.contains_key(&String::from(UUSD)) &&
+        !balanced_assets_info.new_unmatched_assets.contains_key(&String::from(UUSD))
+    {
+        // UST provide
+        // Riskleg in unmatched assets
+        let provided_ust = input_assets.get_mut(&String::from(UUSD)).unwrap();
+
+        (
+            *provided_ust,
+            balanced_assets_info.new_virtual_pairs,
+            balanced_assets_info.new_reserved_asset,
+            balanced_assets_info.new_used_reserved_asset
+        ) = actual_paring(
+            portions,
+            provided_ust.clone(),
+            balanced_assets_info.new_virtual_pairs,
+            balanced_assets_info.new_reserved_asset,
+            balanced_assets_info.new_used_reserved_asset,
+            balanced_assets_info.new_unmatched_assets.iter_mut()
+        );
+
+    } else if !input_assets.contains_key(&String::from(UUSD)) &&
+        balanced_assets_info.new_unmatched_assets.contains_key(&String::from(UUSD)){
+
+        // Riskleg provide
+        // UST in unmatched assets
+
+        let provided_ust = balanced_assets_info.new_unmatched_assets.get_mut(&String::from(UUSD)).unwrap();
+
+        (
+            *provided_ust,
+            balanced_assets_info.new_virtual_pairs,
+            balanced_assets_info.new_reserved_asset,
+            balanced_assets_info.new_used_reserved_asset
+        ) = actual_paring(
+            portions,
+            provided_ust.clone(),
+            balanced_assets_info.new_virtual_pairs,
+            balanced_assets_info.new_reserved_asset,
+            balanced_assets_info.new_used_reserved_asset,
+            input_assets.iter_mut()
+        );
+    }
+
     balanced_assets_info
+}
+
+fn actual_paring(
+    portions: HashMap<String, Uint128>,
+    mut provided_ust: Asset,
+    mut pairset: HashMap<String, Pairset>,
+    mut reserve_ust: Asset,
+    mut used_reserve_ust: Asset,
+    enumerated_assets: IterMut<String, Asset>
+) -> (Asset, HashMap<String, Pairset>, Asset, Asset) {
+    for (token_name, unmatched_unit_asset) in enumerated_assets {
+        let ust_portion = unmatched_unit_asset.amount
+                            .checked_mul(
+                                *portions.get(token_name)
+                                         .unwrap()
+                            ).unwrap()
+                            .checked_div(Uint128::from(STABLELEG_DENOMINATOR)).unwrap();
+
+        let curr_pairset = pairset.get_mut(token_name).unwrap();
+        let ratio = derive_unit_ratio(curr_pairset);
+        let riskleg_ust_value = unmatched_unit_asset.amount
+                                .checked_mul(ratio).unwrap()
+                                .checked_div(Uint128::from(STABLELEG_DENOMINATOR)).unwrap();
+
+        if ust_portion > riskleg_ust_value {
+            curr_pairset.stableleg.amount += riskleg_ust_value;
+            curr_pairset.riskleg.amount += unmatched_unit_asset.amount;
+            unmatched_unit_asset.amount = Uint128::zero();
+            provided_ust.amount = provided_ust.amount - riskleg_ust_value;
+        } else {
+            curr_pairset.stableleg.amount += ust_portion;
+
+            let provided_riskleg_amount = ust_portion
+                                            .checked_mul(Uint128::from(STABLELEG_DENOMINATOR)).unwrap()
+                                            .checked_div(unmatched_unit_asset.amount).unwrap();
+            curr_pairset.riskleg.amount += provided_riskleg_amount;
+
+            unmatched_unit_asset.amount -= provided_riskleg_amount;
+            provided_ust.amount = Uint128::zero();
+        }
+    }
+
+    (provided_ust, pairset, reserve_ust, used_reserve_ust)
 }
 
 fn calculate_weight_unmatched_assets(
@@ -193,5 +259,12 @@ fn derive_unit_ratio(
         unit_pair.riskleg.amount
             .checked_mul(Uint128::from(u128::pow(10, unit_pair.riskleg_denominator))).unwrap()
             .checked_div(unit_pair.stableleg.amount).unwrap()
+    }
+}
+
+fn get_asset_name(asset: Asset) -> String {
+    match asset.info {
+        AssetInfo::NativeToken{ denom } => denom,
+        AssetInfo::Token{ contract_addr } => contract_addr,      
     }
 }
