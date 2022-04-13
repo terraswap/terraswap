@@ -9,6 +9,8 @@ use crate::asset::AssetInfo;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub terraswap_factory: String,
+    pub loop_factory: String,
+    pub astroport_factory: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -22,6 +24,14 @@ pub enum SwapOperation {
         offer_asset_info: AssetInfo,
         ask_asset_info: AssetInfo,
     },
+    Loop {
+        offer_asset_info: AssetInfo,
+        ask_asset_info: AssetInfo,
+    },
+    Astroport {
+        offer_asset_info: AssetInfo,
+        ask_asset_info: AssetInfo,
+    },
 }
 
 impl SwapOperation {
@@ -30,7 +40,9 @@ impl SwapOperation {
             SwapOperation::NativeSwap { ask_denom, .. } => AssetInfo::NativeToken {
                 denom: ask_denom.clone(),
             },
-            SwapOperation::TerraSwap { ask_asset_info, .. } => ask_asset_info.clone(),
+            SwapOperation::TerraSwap { ask_asset_info, .. }
+            | SwapOperation::Loop { ask_asset_info, .. }
+            | SwapOperation::Astroport { ask_asset_info, .. } => ask_asset_info.clone(),
         }
     }
 }
@@ -90,6 +102,8 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
     pub terraswap_factory: String,
+    pub loop_factory: String,
+    pub astroport_factory: String,
 }
 
 // We define a custom struct for each query response

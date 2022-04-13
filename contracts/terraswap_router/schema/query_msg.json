@@ -40,6 +40,33 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "reverse_simulate_swap_operations"
+      ],
+      "properties": {
+        "reverse_simulate_swap_operations": {
+          "type": "object",
+          "required": [
+            "ask_amount",
+            "operations"
+          ],
+          "properties": {
+            "ask_amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "operations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/SwapOperation"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
@@ -121,6 +148,54 @@
           ],
           "properties": {
             "terra_swap": {
+              "type": "object",
+              "required": [
+                "ask_asset_info",
+                "offer_asset_info"
+              ],
+              "properties": {
+                "ask_asset_info": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "offer_asset_info": {
+                  "$ref": "#/definitions/AssetInfo"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "loop"
+          ],
+          "properties": {
+            "loop": {
+              "type": "object",
+              "required": [
+                "ask_asset_info",
+                "offer_asset_info"
+              ],
+              "properties": {
+                "ask_asset_info": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "offer_asset_info": {
+                  "$ref": "#/definitions/AssetInfo"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "astroport"
+          ],
+          "properties": {
+            "astroport": {
               "type": "object",
               "required": [
                 "ask_asset_info",

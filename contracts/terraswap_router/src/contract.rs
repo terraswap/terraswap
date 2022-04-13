@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Response, StdError, StdResult, Uint128, WasmMsg,
+    QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 
 use crate::operations::execute_swap_operation;
@@ -14,8 +14,8 @@ use cw20::Cw20ReceiveMsg;
 use std::collections::HashMap;
 use terra_cosmwasm::{SwapResponse, TerraMsgWrapper, TerraQuerier};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::pair::SimulationResponse;
-use terraswap::querier::{query_pair_info, reverse_simulate, simulate};
+use terraswap::pair::{QueryMsg as PairQueryMsg, SimulationResponse};
+use terraswap::querier::{query_pair_info, reverse_simulate};
 use terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
@@ -32,6 +32,8 @@ pub fn instantiate(
         deps.storage,
         &Config {
             terraswap_factory: deps.api.addr_canonicalize(&msg.terraswap_factory)?,
+            loop_factory: deps.api.addr_canonicalize(&msg.loop_factory)?,
+            astroport_factory: deps.api.addr_canonicalize(&msg.astroport_factory)?,
         },
     )?;
 
@@ -225,6 +227,11 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
             .api
             .addr_humanize(&state.terraswap_factory)?
             .to_string(),
+        loop_factory: deps.api.addr_humanize(&state.loop_factory)?.to_string(),
+        astroport_factory: deps
+            .api
+            .addr_humanize(&state.astroport_factory)?
+            .to_string(),
     };
 
     Ok(resp)
@@ -236,7 +243,6 @@ fn simulate_swap_operations(
     operations: Vec<SwapOperation>,
 ) -> StdResult<SimulateSwapOperationsResponse> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let terraswap_factory = deps.api.addr_humanize(&config.terraswap_factory)?;
     let terra_querier = TerraQuerier::new(&deps.querier);
 
     let operations_len = operations.len();
@@ -249,7 +255,7 @@ fn simulate_swap_operations(
     for operation in operations.into_iter() {
         operation_index += 1;
 
-        match operation {
+        offer_amount = match operation {
             SwapOperation::NativeSwap {
                 offer_denom,
                 ask_denom,
@@ -272,46 +278,49 @@ fn simulate_swap_operations(
                     ask_denom,
                 )?;
 
-                offer_amount = res.receive.amount;
+                res.receive.amount
             }
             SwapOperation::TerraSwap {
                 offer_asset_info,
                 ask_asset_info,
             } => {
-                let pair_info: PairInfo = query_pair_info(
-                    &deps.querier,
-                    terraswap_factory.clone(),
-                    &[offer_asset_info.clone(), ask_asset_info.clone()],
-                )?;
-
-                // Deduct tax before querying simulation
-                if let AssetInfo::NativeToken { denom } = offer_asset_info.clone() {
-                    offer_amount = offer_amount.checked_sub(compute_tax(
-                        &deps.querier,
-                        offer_amount,
-                        denom,
-                    )?)?;
-                }
-
-                let mut res: SimulationResponse = simulate(
-                    &deps.querier,
-                    Addr::unchecked(pair_info.contract_addr),
-                    &Asset {
-                        amount: offer_amount,
-                        info: offer_asset_info,
-                    },
-                )?;
-
-                // Deduct tax after querying simulation
-                if let AssetInfo::NativeToken { denom } = ask_asset_info {
-                    res.return_amount = res.return_amount.checked_sub(compute_tax(
-                        &deps.querier,
-                        res.return_amount,
-                        denom,
-                    )?)?;
-                }
-
-                offer_amount = res.return_amount;
+                let terraswap_factory = deps.api.addr_humanize(&config.terraswap_factory)?;
+                simulate_return_amount(
+                    deps,
+                    terraswap_factory,
+                    offer_amount,
+                    offer_asset_info,
+                    ask_asset_info,
+                )
+                .unwrap()
+            }
+            SwapOperation::Loop {
+                offer_asset_info,
+                ask_asset_info,
+            } => {
+                let loop_factory = deps.api.addr_humanize(&config.loop_factory)?;
+                simulate_return_amount(
+                    deps,
+                    loop_factory,
+                    offer_amount,
+                    offer_asset_info,
+                    ask_asset_info,
+                )
+                .unwrap()
+            }
+            SwapOperation::Astroport {
+                offer_asset_info,
+                ask_asset_info,
+            } => {
+                let astroport_factory = deps.api.addr_humanize(&config.astroport_factory)?;
+                simulate_return_amount(
+                    deps,
+                    astroport_factory,
+                    offer_amount,
+                    offer_asset_info,
+                    ask_asset_info,
+                )
+                .unwrap()
             }
         }
     }
@@ -327,16 +336,15 @@ fn reverse_simulate_swap_operations(
     operations: Vec<SwapOperation>,
 ) -> StdResult<SimulateSwapOperationsResponse> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let terraswap_factory = deps.api.addr_humanize(&config.terraswap_factory)?;
 
     let operations_len = operations.len();
     if operations_len == 0 {
         return Err(StdError::generic_err("must provide operations"));
     }
 
-    let mut offer_amount = ask_amount;
-    for operation in operations.iter().rev() {
-        match operation {
+    let mut ask_amount = ask_amount;
+    for operation in operations.into_iter().rev() {
+        ask_amount = match operation {
             SwapOperation::NativeSwap {
                 offer_denom: _,
                 ask_denom: _,
@@ -349,38 +357,125 @@ fn reverse_simulate_swap_operations(
                 offer_asset_info,
                 ask_asset_info,
             } => {
-                let pair_info: PairInfo = query_pair_info(
-                    &deps.querier,
-                    terraswap_factory.clone(),
-                    &[offer_asset_info.clone(), ask_asset_info.clone()],
-                )?;
+                let terraswap_factory = deps.api.addr_humanize(&config.terraswap_factory)?;
 
-                let mut res = reverse_simulate(
-                    &deps.querier,
-                    Addr::unchecked(pair_info.contract_addr),
-                    &Asset {
-                        amount: offer_amount,
-                        info: ask_asset_info.clone(),
-                    },
-                )?;
+                reverse_simulate_return_amount(
+                    deps,
+                    terraswap_factory,
+                    ask_amount,
+                    offer_asset_info,
+                    ask_asset_info,
+                )
+                .unwrap()
+            }
+            SwapOperation::Loop {
+                offer_asset_info,
+                ask_asset_info,
+            } => {
+                let loop_factory = deps.api.addr_humanize(&config.loop_factory)?;
 
-                // Deduct tax after querying simulation
-                if let AssetInfo::NativeToken { denom } = offer_asset_info {
-                    res.offer_amount = res.offer_amount.checked_add(compute_reverse_tax(
-                        &deps.querier,
-                        res.offer_amount,
-                        denom.to_string(),
-                    )?)?;
-                }
+                reverse_simulate_return_amount(
+                    deps,
+                    loop_factory,
+                    ask_amount,
+                    offer_asset_info,
+                    ask_asset_info,
+                )
+                .unwrap()
+            }
+            SwapOperation::Astroport {
+                offer_asset_info,
+                ask_asset_info,
+            } => {
+                let astroport_factory = deps.api.addr_humanize(&config.astroport_factory)?;
 
-                offer_amount = res.offer_amount;
+                reverse_simulate_return_amount(
+                    deps,
+                    astroport_factory,
+                    ask_amount,
+                    offer_asset_info,
+                    ask_asset_info,
+                )
+                .unwrap()
             }
         }
     }
 
-    Ok(SimulateSwapOperationsResponse {
-        amount: offer_amount,
-    })
+    Ok(SimulateSwapOperationsResponse { amount: ask_amount })
+}
+
+fn simulate_return_amount(
+    deps: Deps,
+    factory: Addr,
+    mut offer_amount: Uint128,
+    offer_asset_info: AssetInfo,
+    ask_asset_info: AssetInfo,
+) -> StdResult<Uint128> {
+    let pair_info: PairInfo = query_pair_info(
+        &deps.querier,
+        factory,
+        &[offer_asset_info.clone(), ask_asset_info.clone()],
+    )?;
+
+    // Deduct tax before querying simulation
+    if let AssetInfo::NativeToken { denom } = offer_asset_info.clone() {
+        offer_amount =
+            offer_amount.checked_sub(compute_tax(&deps.querier, offer_amount, denom)?)?;
+    }
+
+    let mut res: SimulationResponse =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: pair_info.contract_addr,
+            msg: to_binary(&PairQueryMsg::Simulation {
+                offer_asset: Asset {
+                    info: offer_asset_info,
+                    amount: offer_amount,
+                },
+            })?,
+        }))?;
+
+    // Deduct tax after querying simulation
+    if let AssetInfo::NativeToken { denom } = ask_asset_info {
+        res.return_amount =
+            res.return_amount
+                .checked_sub(compute_tax(&deps.querier, res.return_amount, denom)?)?;
+    }
+
+    Ok(res.return_amount)
+}
+
+fn reverse_simulate_return_amount(
+    deps: Deps,
+    factory: Addr,
+    ask_amount: Uint128,
+    offer_asset_info: AssetInfo,
+    ask_asset_info: AssetInfo,
+) -> StdResult<Uint128> {
+    let pair_info: PairInfo = query_pair_info(
+        &deps.querier,
+        factory,
+        &[offer_asset_info.clone(), ask_asset_info.clone()],
+    )?;
+
+    let mut res = reverse_simulate(
+        &deps.querier,
+        Addr::unchecked(pair_info.contract_addr),
+        &Asset {
+            amount: ask_amount,
+            info: ask_asset_info,
+        },
+    )?;
+
+    // Add tax after querying simulation
+    if let AssetInfo::NativeToken { denom } = offer_asset_info {
+        res.offer_amount = res.offer_amount.checked_add(compute_reverse_tax(
+            &deps.querier,
+            res.offer_amount,
+            denom,
+        )?)?;
+    }
+
+    Ok(res.offer_amount)
 }
 
 fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
@@ -399,6 +494,14 @@ fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
                 },
             ),
             SwapOperation::TerraSwap {
+                offer_asset_info,
+                ask_asset_info,
+            }
+            | SwapOperation::Loop {
+                offer_asset_info,
+                ask_asset_info,
+            }
+            | SwapOperation::Astroport {
                 offer_asset_info,
                 ask_asset_info,
             } => (offer_asset_info.clone(), ask_asset_info.clone()),

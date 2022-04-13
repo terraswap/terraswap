@@ -234,6 +234,54 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "loop"
+          ],
+          "properties": {
+            "loop": {
+              "type": "object",
+              "required": [
+                "ask_asset_info",
+                "offer_asset_info"
+              ],
+              "properties": {
+                "ask_asset_info": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "offer_asset_info": {
+                  "$ref": "#/definitions/AssetInfo"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "astroport"
+          ],
+          "properties": {
+            "astroport": {
+              "type": "object",
+              "required": [
+                "ask_asset_info",
+                "offer_asset_info"
+              ],
+              "properties": {
+                "ask_asset_info": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "offer_asset_info": {
+                  "$ref": "#/definitions/AssetInfo"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
