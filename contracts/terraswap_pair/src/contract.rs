@@ -14,6 +14,7 @@ use cosmwasm_bignumber::{Decimal256, Uint256};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
+use std::cmp::Ordering;
 use std::str::FromStr;
 use terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
 use terraswap::pair::{
@@ -391,21 +392,22 @@ pub fn swap(
     let (return_amount, spread_amount, commission_amount) =
         compute_swap(offer_pool.amount, ask_pool.amount, offer_amount);
 
-    // check max spread limit if exist
-    assert_max_spread(
-        belief_price,
-        max_spread,
-        offer_amount,
-        return_amount + commission_amount,
-        spread_amount,
-    )?;
-
-    // compute tax
     let return_asset = Asset {
         info: ask_pool.info.clone(),
         amount: return_amount,
     };
 
+    // check max spread limit if exist
+    assert_max_spread(
+        deps.as_ref(),
+        belief_price,
+        max_spread,
+        offer_asset.clone(),
+        return_asset.clone(),
+        spread_amount,
+    )?;
+
+    // compute tax
     let tax_amount = return_asset.compute_tax(&deps.querier)?;
     let receiver = to.unwrap_or_else(|| sender.clone());
 
@@ -630,15 +632,50 @@ fn compute_offer_amount(
 /// we compute new spread else we just use terraswap
 /// spread to check `max_spread`
 pub fn assert_max_spread(
+    deps: Deps,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
-    offer_amount: Uint128,
-    return_amount: Uint128,
+    offer_asset: Asset,
+    return_asset: Asset,
     spread_amount: Uint128,
 ) -> Result<(), ContractError> {
-    let offer_amount: Uint256 = offer_amount.into();
-    let return_amount: Uint256 = return_amount.into();
-    let spread_amount: Uint256 = spread_amount.into();
+    let offer_decimal = offer_asset.info.query_decimals(&deps.querier)?;
+    let return_decimal = return_asset.info.query_decimals(&deps.querier)?;
+
+    let (offer_amount, return_amount, spread_amount): (Uint256, Uint256, Uint256) =
+        match offer_decimal.cmp(&return_decimal) {
+            Ordering::Greater => {
+                let diff_decimal = 10u64.pow((offer_decimal - return_decimal).into());
+
+                (
+                    offer_asset.amount.into(),
+                    return_asset
+                        .amount
+                        .checked_mul(Uint128::from(diff_decimal))?
+                        .into(),
+                    spread_amount
+                        .checked_mul(Uint128::from(diff_decimal))?
+                        .into(),
+                )
+            }
+            Ordering::Less => {
+                let diff_decimal = 10u64.pow((return_decimal - offer_decimal).into());
+
+                (
+                    offer_asset
+                        .amount
+                        .checked_mul(Uint128::from(diff_decimal))?
+                        .into(),
+                    return_asset.amount.into(),
+                    spread_amount.into(),
+                )
+            }
+            Ordering::Equal => (
+                offer_asset.amount.into(),
+                return_asset.amount.into(),
+                spread_amount.into(),
+            ),
+        };
 
     if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
         let belief_price: Decimal256 = belief_price.into();
