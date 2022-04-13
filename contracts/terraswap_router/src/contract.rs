@@ -466,7 +466,7 @@ fn reverse_simulate_return_amount(
         },
     )?;
 
-    // Deduct tax after querying simulation
+    // Add tax after querying simulation
     if let AssetInfo::NativeToken { denom } = offer_asset_info {
         res.offer_amount = res.offer_amount.checked_add(compute_reverse_tax(
             &deps.querier,
