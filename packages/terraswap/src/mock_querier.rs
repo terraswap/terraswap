@@ -10,6 +10,8 @@ use crate::factory::QueryMsg as FactoryQueryMsg;
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 
+use std::iter::FromIterator;
+
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
@@ -101,7 +103,9 @@ impl TerraswapFactoryQuerier {
 pub(crate) fn pairs_to_map(pairs: &[(&String, &PairInfo)]) -> HashMap<String, PairInfo> {
     let mut pairs_map: HashMap<String, PairInfo> = HashMap::new();
     for (key, pair) in pairs.iter() {
-        pairs_map.insert(key.to_string(), (*pair).clone());
+        let mut sort_key: Vec<char> = key.chars().collect();
+        sort_key.sort_by(|a, b| b.cmp(a));
+        pairs_map.insert(String::from_iter(sort_key.iter()), (**pair).clone());
     }
     pairs_map
 }
@@ -152,9 +156,15 @@ impl WasmMockQuerier {
             }
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => match from_binary(msg) {
                 Ok(FactoryQueryMsg::Pair { asset_infos }) => {
-                    let key = asset_infos[0].to_string() + asset_infos[1].to_string().as_str();
-                    match self.terraswap_factory_querier.pairs.get(&key) {
-                        Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(&v).unwrap())),
+                    let key = [asset_infos[0].to_string(), asset_infos[1].to_string()].join("");
+                    let mut sort_key: Vec<char> = key.chars().collect();
+                    sort_key.sort_by(|a, b| b.cmp(a));
+                    match self
+                        .terraswap_factory_querier
+                        .pairs
+                        .get(&String::from_iter(sort_key.iter()))
+                    {
+                        Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(v).unwrap())),
                         None => SystemResult::Err(SystemError::InvalidRequest {
                             error: "No pair info exists".to_string(),
                             request: msg.as_slice().into(),

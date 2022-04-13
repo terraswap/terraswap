@@ -80,6 +80,10 @@ pub enum QueryMsg {
         offer_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
+    ReverseSimulateSwapOperations {
+        ask_amount: Uint128,
+        operations: Vec<SwapOperation>,
+    },
 }
 
 // We define a custom struct for each query response
@@ -93,3 +97,7 @@ pub struct ConfigResponse {
 pub struct SimulateSwapOperationsResponse {
     pub amount: Uint128,
 }
+
+/// We currently take no arguments for migrations
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MigrateMsg {}
