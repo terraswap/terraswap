@@ -164,9 +164,9 @@ pub struct IbcQuerier {
 }
 
 impl IbcQuerier {
-    pub fn new(denom_treaces: &[(&String, (&String, &String))]) -> Self {
+    pub fn new(denom_traces: &[(&String, (&String, &String))]) -> Self {
         let mut denom_traces_map: HashMap<String, DenomTrace> = HashMap::new();
-        for (hash, denom_trace) in denom_treaces.iter() {
+        for (hash, denom_trace) in denom_traces.iter() {
             let mut proto_denom_trace = DenomTrace::new();
             proto_denom_trace.set_path(denom_trace.0.to_string());
             proto_denom_trace.set_base_denom(denom_trace.1.to_string());
@@ -183,41 +183,36 @@ impl WasmMockQuerier {
     pub fn handle_query(&self, request: &QueryRequest<TerraQueryWrapper>) -> QuerierResult {
         match &request {
             QueryRequest::Custom(TerraQueryWrapper { route, query_data }) => {
-                if &TerraRoute::Treasury == route {
-                    match query_data {
-                        TerraQuery::TaxRate {} => {
-                            let res = TaxRateResponse {
-                                rate: self.tax_querier.rate,
-                            };
-                            SystemResult::Ok(ContractResult::Ok(to_binary(&res).unwrap()))
-                        }
-                        TerraQuery::TaxCap { denom } => {
-                            let cap = self
-                                .tax_querier
-                                .caps
-                                .get(denom)
-                                .copied()
-                                .unwrap_or_default();
-                            let res = TaxCapResponse { cap };
-                            SystemResult::Ok(ContractResult::Ok(to_binary(&res).unwrap()))
-                        }
-                        _ => panic!("DO NOT ENTER HERE"),
+                match (route, query_data) {
+                    (&TerraRoute::Treasury, TerraQuery::TaxRate {}) => {
+                        let res = TaxRateResponse {
+                            rate: self.tax_querier.rate,
+                        };
+                        SystemResult::Ok(ContractResult::Ok(to_binary(&res).unwrap()))
                     }
-                } else if route == &TerraRoute::Market {
-                    match query_data {
+                    (&TerraRoute::Treasury, TerraQuery::TaxCap { denom }) => {
+                        let cap = self
+                            .tax_querier
+                            .caps
+                            .get(denom)
+                            .copied()
+                            .unwrap_or_default();
+                        let res = TaxCapResponse { cap };
+                        SystemResult::Ok(ContractResult::Ok(to_binary(&res).unwrap()))
+                    }
+                    (
+                        &TerraRoute::Market,
                         TerraQuery::Swap {
                             offer_coin,
                             ask_denom: _,
-                        } => {
-                            let res = SwapResponse {
-                                receive: offer_coin.clone(),
-                            };
-                            SystemResult::Ok(ContractResult::from(to_binary(&res)))
-                        }
-                        _ => panic!("DO NOT ENTER HERE"),
+                        },
+                    ) => {
+                        let res = SwapResponse {
+                            receive: offer_coin.clone(),
+                        };
+                        SystemResult::Ok(ContractResult::from(to_binary(&res)))
                     }
-                } else {
-                    panic!("DO NOT ENTER HERE")
+                    (_, _) => panic!("DO NOT ENTER HERE"),
                 }
             }
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => match from_binary(msg) {
