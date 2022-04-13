@@ -95,7 +95,7 @@ pub fn execute_create_pair(
         return Err(StdError::generic_err("same asset"));
     }
 
-    if !(asset_infos[0].is_validate(&deps.querier) && asset_infos[1].is_validate(&deps.querier)) {
+    if !(asset_infos[0].is_valid(&deps.querier) && asset_infos[1].is_valid(&deps.querier)) {
         return Err(StdError::generic_err("invalid asset"));
     }
 

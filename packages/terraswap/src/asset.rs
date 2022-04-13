@@ -209,22 +209,15 @@ impl AssetInfo {
         }
     }
 
-    pub fn is_validate(&self, querier: &QuerierWrapper) -> bool {
+    pub fn is_valid(&self, querier: &QuerierWrapper) -> bool {
         match self {
             AssetInfo::NativeToken { denom } => {
                 if denom == "uluna" {
                     return true;
                 } else if denom.starts_with('u') {
-                    let res_actives = query_active_denoms(querier);
-                    if res_actives.is_err() {
-                        return false;
-                    }
-
-                    let actives = res_actives.unwrap();
-                    let res = actives.iter().find(|active_denom| *active_denom == denom);
-                    if res != None {
-                        return true;
-                    }
+                    return query_active_denoms(querier)
+                        .map(|actives| actives.contains(denom))
+                        .unwrap_or(false);
                 } else if denom.starts_with("ibc") {
                     return query_ibc_denom(querier, denom.to_string()).is_ok();
                 }
