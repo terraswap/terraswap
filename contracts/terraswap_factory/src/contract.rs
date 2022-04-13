@@ -90,6 +90,15 @@ pub fn execute_create_pair(
     asset_infos: [AssetInfo; 2],
 ) -> StdResult<Response> {
     let config: Config = CONFIG.load(deps.storage)?;
+
+    if asset_infos[0] == asset_infos[1] {
+        return Err(StdError::generic_err("same asset"));
+    }
+
+    if !(asset_infos[0].is_valid(&deps.querier) && asset_infos[1].is_valid(&deps.querier)) {
+        return Err(StdError::generic_err("invalid asset"));
+    }
+
     let raw_infos = [
         asset_infos[0].to_raw(deps.api)?,
         asset_infos[1].to_raw(deps.api)?,

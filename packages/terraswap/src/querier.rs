@@ -1,12 +1,15 @@
 use crate::asset::{Asset, AssetInfo, PairInfo};
 use crate::factory::QueryMsg as FactoryQueryMsg;
 use crate::pair::{QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
+use crate::query::{QueryActivesResponse, QueryDenomTraceRequest, QueryDenomTraceResponse};
 
 use cosmwasm_std::{
-    to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, QuerierWrapper,
-    QueryRequest, StdResult, Uint128, WasmQuery,
+    to_binary, to_vec, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Binary, Coin, Empty,
+    QuerierWrapper, QueryRequest, StdError, StdResult, Uint128, WasmQuery,
 };
+
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
+use protobuf::Message;
 
 pub fn query_balance(
     querier: &QuerierWrapper,
@@ -102,4 +105,43 @@ pub fn reverse_simulate(
             ask_asset: ask_asset.clone(),
         })?,
     }))
+}
+
+pub fn query_active_denoms(querier: &QuerierWrapper) -> StdResult<Vec<String>> {
+    let req = to_vec::<QueryRequest<Empty>>(&QueryRequest::Stargate {
+        path: "/terra.oracle.v1beta1.Query/Actives".to_string(),
+        data: Binary::from(vec![]),
+    })
+    .unwrap();
+
+    let res: Binary = querier.raw_query(req.as_slice()).unwrap().unwrap();
+
+    let res: QueryActivesResponse = Message::parse_from_bytes(res.as_slice())
+        .map_err(|_| StdError::parse_err("QueryActivesResponse", "failed to parse data"))?;
+
+    Ok(res.actives.to_vec())
+}
+
+pub fn query_ibc_denom(querier: &QuerierWrapper, denom: String) -> StdResult<String> {
+    let denoms: Vec<&str> = denom.split('/').collect();
+    if denoms.len() != 2 || denoms[0] != "ibc" {
+        return Err(StdError::generic_err("invalid ibc denom"));
+    }
+
+    let mut req = QueryDenomTraceRequest::new();
+    req.set_hash(denoms[1].to_string());
+    let query_denom_trace_req: Binary = Binary::from(req.write_to_bytes().unwrap());
+
+    let req = to_vec::<QueryRequest<Empty>>(&QueryRequest::Stargate {
+        path: "/ibc.applications.transfer.v1.Query/DenomTrace".to_string(),
+        data: query_denom_trace_req,
+    })
+    .unwrap();
+
+    let res: Binary = querier.raw_query(req.as_slice()).unwrap().unwrap();
+
+    let res: QueryDenomTraceResponse = Message::parse_from_bytes(res.as_slice())
+        .map_err(|_| StdError::parse_err("QueryDenomTraceResponse", "failed to parse data"))?;
+
+    Ok(res.denom_trace.unwrap().base_denom)
 }

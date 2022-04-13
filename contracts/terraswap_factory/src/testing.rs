@@ -1,12 +1,12 @@
 use crate::contract::{execute, instantiate, query, reply};
-use crate::mock_querier::mock_dependencies;
+use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
 
 use crate::state::{pair_key, TmpPairInfo, TMP_PAIR_INFO};
 
-use cosmwasm_std::testing::{mock_env, mock_info};
+use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockStorage};
 use cosmwasm_std::{
-    attr, from_binary, to_binary, ContractResult, Reply, ReplyOn, StdError, SubMsg,
-    SubMsgExecutionResponse, WasmMsg,
+    attr, from_binary, to_binary, ContractResult, OwnedDeps, Reply, ReplyOn, StdError, SubMsg,
+    SubMsgExecutionResponse, Uint128, WasmMsg,
 };
 use terraswap::asset::{AssetInfo, PairInfo};
 use terraswap::factory::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -100,10 +100,9 @@ fn update_config() {
     }
 }
 
-#[test]
-fn create_pair() {
-    let mut deps = mock_dependencies(&[]);
-
+fn init(
+    mut deps: OwnedDeps<MockStorage, MockApi, WasmMockQuerier>,
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
@@ -112,12 +111,30 @@ fn create_pair() {
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
 
+    deps.querier.with_active_denoms(&["uusd".to_string()]);
+    deps.querier.with_token_balances(&[(
+        &"asset0001".to_string(),
+        &[(&"addr0000".to_string(), &Uint128::zero())],
+    )]);
+    deps.querier.with_ibc_denom_traces(&[(
+        &"HASH".to_string(),
+        (&"channel".to_string(), &"denom".to_string()),
+    )]);
+
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
 
+    deps
+}
+
+#[test]
+fn create_pair() {
+    let mut deps = mock_dependencies(&[]);
+    deps = init(deps);
+
     let asset_infos = [
-        AssetInfo::Token {
-            contract_addr: "asset0000".to_string(),
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
         },
         AssetInfo::Token {
             contract_addr: "asset0001".to_string(),
@@ -135,7 +152,7 @@ fn create_pair() {
         res.attributes,
         vec![
             attr("action", "create_pair"),
-            attr("pair", "asset0000-asset0001")
+            attr("pair", "uusd-asset0001")
         ]
     );
     assert_eq!(
@@ -171,6 +188,196 @@ fn create_pair() {
             pair_key: pair_key(&raw_infos),
         }
     );
+}
+
+#[test]
+fn create_pair_native_token_and_ibc_token() {
+    let mut deps = mock_dependencies(&[]);
+    deps = init(deps);
+
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "ibc/HASH".to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos: asset_infos.clone(),
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(
+        res.attributes,
+        vec![attr("action", "create_pair"), attr("pair", "uusd-ibc/HASH")]
+    );
+    assert_eq!(
+        res.messages,
+        vec![SubMsg {
+            id: 1,
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+            msg: WasmMsg::Instantiate {
+                msg: to_binary(&PairInstantiateMsg {
+                    asset_infos: asset_infos.clone(),
+                    token_code_id: 123u64,
+                })
+                .unwrap(),
+                code_id: 321u64,
+                funds: vec![],
+                label: "".to_string(),
+                admin: None,
+            }
+            .into()
+        },]
+    );
+
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
+    ];
+
+    assert_eq!(
+        TMP_PAIR_INFO.load(&deps.storage).unwrap(),
+        TmpPairInfo {
+            asset_infos: raw_infos.clone(),
+            pair_key: pair_key(&raw_infos),
+        }
+    );
+}
+
+#[test]
+fn fail_to_create_same_pair() {
+    let mut deps = mock_dependencies(&[]);
+    deps = init(deps);
+
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair { asset_infos };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    execute(deps.as_mut(), env, info, msg).unwrap_err();
+}
+
+#[test]
+fn fail_to_create_pair_with_unactive_denoms() {
+    let mut deps = mock_dependencies(&[]);
+    deps = init(deps);
+
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "uxxx".to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair { asset_infos };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    execute(deps.as_mut(), env, info, msg).unwrap_err();
+}
+
+#[test]
+fn fail_to_create_pair_with_invalid_denom() {
+    let mut deps = mock_dependencies(&[]);
+    deps = init(deps);
+
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "xxx".to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair { asset_infos };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    execute(deps.as_mut(), env, info, msg).unwrap_err();
+}
+
+#[test]
+fn fail_to_create_pair_with_unknown_token() {
+    let mut deps = mock_dependencies(&[]);
+
+    let msg = InstantiateMsg {
+        pair_code_id: 321u64,
+        token_code_id: 123u64,
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+
+    deps.querier.with_active_denoms(&["uusd".to_string()]);
+
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+        AssetInfo::Token {
+            contract_addr: "xxx".to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair { asset_infos };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    execute(deps.as_mut(), env, info, msg).unwrap_err();
+}
+
+#[test]
+#[should_panic]
+fn fail_to_create_pair_with_unknown_ibc_token() {
+    let mut deps = mock_dependencies(&[]);
+
+    let msg = InstantiateMsg {
+        pair_code_id: 321u64,
+        token_code_id: 123u64,
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+
+    deps.querier.with_active_denoms(&["uusd".to_string()]);
+
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "ibc/HA".to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair { asset_infos };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    execute(deps.as_mut(), env, info, msg).unwrap_err();
 }
 
 #[test]

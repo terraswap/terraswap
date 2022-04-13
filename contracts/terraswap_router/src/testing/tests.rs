@@ -4,11 +4,11 @@ use cosmwasm_std::{
 };
 
 use crate::contract::{execute, instantiate, query};
-use crate::testing::mock_querier::mock_dependencies;
+use terraswap::mock_querier::mock_dependencies;
 
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terra_cosmwasm::{create_swap_msg, create_swap_send_msg};
-use terraswap::asset::{Asset, AssetInfo};
+use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
@@ -301,18 +301,32 @@ fn execute_swap_operation() {
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    deps.querier
-        .with_terraswap_pairs(&[(&"uusdasset".to_string(), &"pair".to_string())]);
+    deps.querier.with_terraswap_pairs(&[(
+        &"uusdasset".to_string(),
+        &PairInfo {
+            asset_infos: [
+                AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+            ],
+            contract_addr: "pair0000".to_string(),
+            liquidity_token: "liquidity0000".to_string(),
+        },
+    )]);
     deps.querier.with_tax(
         Decimal::percent(5),
         &[(&"uusd".to_string(), &Uint128::from(1000000u128))],
     );
     deps.querier.with_balance(&[(
-        MOCK_CONTRACT_ADDR.to_string(),
-        &[Coin {
+        &MOCK_CONTRACT_ADDR.to_string(),
+        [Coin {
             amount: Uint128::from(1000000u128),
             denom: "uusd".to_string(),
-        }],
+        }]
+        .to_vec(),
     )]);
 
     let msg = ExecuteMsg::ExecuteSwapOperation {
@@ -364,8 +378,21 @@ fn execute_swap_operation() {
             "uluna".to_string()
         ))],
     );
-    deps.querier
-        .with_terraswap_pairs(&[(&"assetuusd".to_string(), &"pair".to_string())]);
+    deps.querier.with_terraswap_pairs(&[(
+        &"assetuusd".to_string(),
+        &PairInfo {
+            asset_infos: [
+                AssetInfo::Token {
+                    contract_addr: "asset".to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+            ],
+            contract_addr: "pair0000".to_string(),
+            liquidity_token: "liquidity0000".to_string(),
+        },
+    )]);
     deps.querier.with_token_balances(&[(
         &"asset".to_string(),
         &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(1000000u128))],
@@ -391,7 +418,7 @@ fn execute_swap_operation() {
             contract_addr: "asset".to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Send {
-                contract: "pair".to_string(),
+                contract: "pair0000".to_string(),
                 amount: Uint128::from(1000000u128),
                 msg: to_binary(&PairExecuteMsg::Swap {
                     offer_asset: Asset {
@@ -460,8 +487,36 @@ fn query_buy_with_routes() {
     };
 
     deps.querier.with_terraswap_pairs(&[
-        (&"ukrwasset0000".to_string(), &"pair0000".to_string()),
-        (&"asset0000uluna".to_string(), &"pair0001".to_string()),
+        (
+            &"ukrwasset0000".to_string(),
+            &PairInfo {
+                asset_infos: [
+                    AssetInfo::NativeToken {
+                        denom: "ukrw".to_string(),
+                    },
+                    AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                ],
+                contract_addr: "pair0000".to_string(),
+                liquidity_token: "liquidity0000".to_string(),
+            },
+        ),
+        (
+            &"asset0000uluna".to_string(),
+            &PairInfo {
+                asset_infos: [
+                    AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                ],
+                contract_addr: "pair0001".to_string(),
+                liquidity_token: "liquidity0001".to_string(),
+            },
+        ),
     ]);
 
     let res: SimulateSwapOperationsResponse =
@@ -501,11 +556,12 @@ fn query_buy_with_routes() {
 fn assert_minimum_receive_native_token() {
     let mut deps = mock_dependencies(&[]);
     deps.querier.with_balance(&[(
-        "addr0000".to_string(),
-        &[Coin {
+        &"addr0000".to_string(),
+        [Coin {
             denom: "uusd".to_string(),
             amount: Uint128::from(1000000u128),
-        }],
+        }]
+        .to_vec(),
     )]);
 
     let info = mock_info("addr0000", &[]);
