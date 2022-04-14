@@ -7,7 +7,7 @@ use crate::querier::compute_tax;
 use crate::state::{Config, CONFIG};
 
 use cw20::Cw20ExecuteMsg;
-use terra_cosmwasm::{create_swap_msg, create_swap_send_msg, TerraMsgWrapper};
+use terra_cosmwasm::{create_swap_msg, create_swap_send_msg, TerraMsgWrapper, TerraQueryWrapper};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::querier::{query_balance, query_pair_info, query_token_balance};
@@ -16,7 +16,7 @@ use terraswap::router::SwapOperation;
 /// Execute swap operation
 /// swap all offer asset to ask asset
 pub fn execute_swap_operation(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     info: MessageInfo,
     operation: SwapOperation,
@@ -97,7 +97,7 @@ pub fn execute_swap_operation(
 }
 
 pub fn asset_into_swap_msg(
-    deps: Deps,
+    deps: Deps<TerraQueryWrapper>,
     pair_contract: Addr,
     offer_asset: Asset,
     max_spread: Option<Decimal>,

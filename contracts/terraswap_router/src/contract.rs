@@ -12,7 +12,7 @@ use crate::state::{Config, CONFIG};
 
 use cw20::Cw20ReceiveMsg;
 use std::collections::HashMap;
-use terra_cosmwasm::{SwapResponse, TerraMsgWrapper, TerraQuerier};
+use terra_cosmwasm::{SwapResponse, TerraMsgWrapper, TerraQuerier, TerraQueryWrapper};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::pair::{QueryMsg as PairQueryMsg, SimulationResponse};
 use terraswap::querier::query_pair_info;
@@ -23,7 +23,7 @@ use terraswap::router::{
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -40,7 +40,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -98,7 +98,7 @@ fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<Opti
 }
 
 pub fn receive_cw20(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     _info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
@@ -124,7 +124,7 @@ pub fn receive_cw20(
 }
 
 pub fn execute_swap_operations(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     sender: Addr,
     operations: Vec<SwapOperation>,
@@ -182,7 +182,7 @@ pub fn execute_swap_operations(
 }
 
 fn assert_minium_receive(
-    deps: Deps,
+    deps: Deps<TerraQueryWrapper>,
     asset_info: AssetInfo,
     prev_balance: Uint128,
     minium_receive: Uint128,
@@ -202,7 +202,7 @@ fn assert_minium_receive(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<TerraQueryWrapper>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::SimulateSwapOperations {
@@ -212,7 +212,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps<TerraQueryWrapper>) -> StdResult<ConfigResponse> {
     let state = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         terraswap_factory: deps
@@ -225,7 +225,7 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 }
 
 fn simulate_swap_operations(
-    deps: Deps,
+    deps: Deps<TerraQueryWrapper>,
     offer_amount: Uint128,
     operations: Vec<SwapOperation>,
 ) -> StdResult<SimulateSwapOperationsResponse> {

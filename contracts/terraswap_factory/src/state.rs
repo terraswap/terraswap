@@ -41,7 +41,7 @@ pub fn read_pairs(
     limit: Option<u32>,
 ) -> StdResult<Vec<PairInfo>> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = calc_range_start(start_after).map(Bound::exclusive);
+    let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
 
     PAIRS
         .range(storage, start, None, Order::Ascending)
@@ -72,18 +72,19 @@ fn calc_range_start(start_after: Option<[AssetInfoRaw; 2]>) -> Option<Vec<u8>> {
 mod test {
     use super::*;
 
-    use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Api, StdResult, Storage};
     use cosmwasm_storage::{
         bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket,
     };
+    use terraswap::mock_querier::mock_dependencies;
     const KEY_CONFIG: &[u8] = b"config";
 
     pub fn store_config(storage: &mut dyn Storage, config: &Config) -> StdResult<()> {
-        singleton(storage, KEY_CONFIG).save(config)
+        singleton(storage, KEY_CONFIG).save(config).unwrap();
+        Ok(())
     }
     pub fn read_config(storage: &dyn Storage) -> StdResult<Config> {
-        singleton_read(storage, KEY_CONFIG).load()
+        Ok(singleton_read(storage, KEY_CONFIG).load().unwrap())
     }
 
     #[test]

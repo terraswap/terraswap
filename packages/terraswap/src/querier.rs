@@ -10,9 +10,10 @@ use cosmwasm_std::{
 
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use protobuf::Message;
+use terra_cosmwasm::TerraQueryWrapper;
 
 pub fn query_balance(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQueryWrapper>,
     account_addr: Addr,
     denom: String,
 ) -> StdResult<Uint128> {
@@ -24,7 +25,10 @@ pub fn query_balance(
     Ok(balance.amount.amount)
 }
 
-pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdResult<Vec<Coin>> {
+pub fn query_all_balances(
+    querier: &QuerierWrapper<TerraQueryWrapper>,
+    account_addr: Addr,
+) -> StdResult<Vec<Coin>> {
     // load price form the oracle
     let all_balances: AllBalanceResponse =
         querier.query(&QueryRequest::Bank(BankQuery::AllBalances {
@@ -34,7 +38,7 @@ pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdRe
 }
 
 pub fn query_token_balance(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQueryWrapper>,
     contract_addr: Addr,
     account_addr: Addr,
 ) -> StdResult<Uint128> {
@@ -49,7 +53,10 @@ pub fn query_token_balance(
     Ok(res.balance)
 }
 
-pub fn query_supply(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<Uint128> {
+pub fn query_supply(
+    querier: &QuerierWrapper<TerraQueryWrapper>,
+    contract_addr: Addr,
+) -> StdResult<Uint128> {
     // load price form the oracle
     let token_info: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: contract_addr.to_string(),
@@ -59,7 +66,10 @@ pub fn query_supply(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<
     Ok(token_info.total_supply)
 }
 
-pub fn query_decimals(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<u8> {
+pub fn query_decimals(
+    querier: &QuerierWrapper<TerraQueryWrapper>,
+    contract_addr: Addr,
+) -> StdResult<u8> {
     let token_info: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: contract_addr.to_string(),
         msg: to_binary(&Cw20QueryMsg::TokenInfo {})?,
@@ -69,7 +79,7 @@ pub fn query_decimals(querier: &QuerierWrapper, contract_addr: Addr) -> StdResul
 }
 
 pub fn query_pair_info(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQueryWrapper>,
     factory_contract: Addr,
     asset_infos: &[AssetInfo; 2],
 ) -> StdResult<PairInfo> {
@@ -82,7 +92,7 @@ pub fn query_pair_info(
 }
 
 pub fn simulate(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQueryWrapper>,
     pair_contract: Addr,
     offer_asset: &Asset,
 ) -> StdResult<SimulationResponse> {
@@ -95,7 +105,7 @@ pub fn simulate(
 }
 
 pub fn reverse_simulate(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQueryWrapper>,
     pair_contract: Addr,
     ask_asset: &Asset,
 ) -> StdResult<ReverseSimulationResponse> {
@@ -107,7 +117,7 @@ pub fn reverse_simulate(
     }))
 }
 
-pub fn query_active_denoms(querier: &QuerierWrapper) -> StdResult<Vec<String>> {
+pub fn query_active_denoms(querier: &QuerierWrapper<TerraQueryWrapper>) -> StdResult<Vec<String>> {
     let req = to_vec::<QueryRequest<Empty>>(&QueryRequest::Stargate {
         path: "/terra.oracle.v1beta1.Query/Actives".to_string(),
         data: Binary::from(vec![]),
@@ -122,7 +132,10 @@ pub fn query_active_denoms(querier: &QuerierWrapper) -> StdResult<Vec<String>> {
     Ok(res.actives.to_vec())
 }
 
-pub fn query_ibc_denom(querier: &QuerierWrapper, denom: String) -> StdResult<String> {
+pub fn query_ibc_denom(
+    querier: &QuerierWrapper<TerraQueryWrapper>,
+    denom: String,
+) -> StdResult<String> {
     let denoms: Vec<&str> = denom.split('/').collect();
     if denoms.len() != 2 || denoms[0] != "ibc" {
         return Err(StdError::generic_err("invalid ibc denom"));

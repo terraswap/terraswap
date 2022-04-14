@@ -1,9 +1,13 @@
 use cosmwasm_std::{Decimal, QuerierWrapper, StdResult, Uint128};
-use terra_cosmwasm::TerraQuerier;
+use terra_cosmwasm::{TerraQuerier, TerraQueryWrapper};
 
 static DECIMAL_FRACTION: Uint128 = Uint128::new(1_000_000_000_000_000_000u128);
 
-pub fn compute_tax(querier: &QuerierWrapper, amount: Uint128, denom: String) -> StdResult<Uint128> {
+pub fn compute_tax(
+    querier: &QuerierWrapper<TerraQueryWrapper>,
+    amount: Uint128,
+    denom: String,
+) -> StdResult<Uint128> {
     if denom == "uluna" {
         return Ok(Uint128::zero());
     }
