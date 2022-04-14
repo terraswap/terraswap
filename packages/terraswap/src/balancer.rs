@@ -1,10 +1,10 @@
 // Will be moved into terraswap_interface (ToBeFixed)
-use std::{collections::{HashMap, hash_map::IterMut}};
+use std::{collections::{HashMap, hash_map::IterMut}, fmt};
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::{StdResult, Uint128, StdError};
 use crate::asset::{Asset, AssetInfo};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NewCalculatedBalacedAssets {
     pub new_virtual_pairs: HashMap<String, Pairset>,
     pub new_unmatched_assets: HashMap<String, Asset>,
@@ -13,11 +13,38 @@ pub struct NewCalculatedBalacedAssets {
     pub reserve_usage_ratio: Uint128, // 10^6 denominator
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+impl fmt::Display for NewCalculatedBalacedAssets {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut new_virtual_pairs_vec: Vec<String> = self.new_virtual_pairs.iter()
+                                                    .map(|(k, v)|{
+                                                        format!("{} / {}", *k , *v)
+                                                    }).collect();
+        new_virtual_pairs_vec.sort();
+        let new_virtual_pairs_str = new_virtual_pairs_vec.join("\n");
+
+        let mut new_unmatched_assets_vec: Vec<String> = self.new_unmatched_assets.iter()
+                                                    .map(|(k, v)|{
+                                                        format!("{} / {}", *k, *v)
+                                                    }).collect();
+        new_unmatched_assets_vec.sort();
+        let new_unmatched_assets_str = new_unmatched_assets_vec.join("\n");
+
+        write!(f, "Pairs\n{}\n\nUnmatched assets:\n{}\n\nReserved UST: {}\nUsed reserved UST: {}\nReserve usage ratio: {}",
+                    new_virtual_pairs_str, new_unmatched_assets_str, self.new_reserved_asset, self.new_used_reserved_asset, self.reserve_usage_ratio)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Pairset {
     pub stableleg: Asset,
     pub riskleg: Asset,
     pub riskleg_denominator: u32,
+}
+
+impl fmt::Display for Pairset {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Stableleg: {:?} Riskleg: {:?} Denom: {}", self.stableleg, self.riskleg, self.riskleg_denominator)
+    }
 }
 
 const STABLELEG_DENOMINATOR: u32 = 6;
@@ -193,7 +220,7 @@ fn try_pairing_with_unmatched_assets(
             info: AssetInfo::NativeToken{ denom: String::from("uusd") },
             amount: balanced_assets_info.new_reserved_asset.amount
                         .checked_mul(balanced_assets_info.reserve_usage_ratio).unwrap()
-                        .checked_div(Uint128::from(STABLELEG_DENOMINATOR)).unwrap(),
+                        .checked_div( get_pow10(STABLELEG_DENOMINATOR) ).unwrap(),
         };
 
         let (
@@ -231,13 +258,13 @@ fn actual_paring(
                                 *portions.get(token_name)
                                          .unwrap()
                             ).unwrap()
-                            .checked_div(Uint128::from(STABLELEG_DENOMINATOR)).unwrap();
+                            .checked_div( get_pow10(STABLELEG_DENOMINATOR) ).unwrap();
 
         let curr_pairset = pairset.get_mut(token_name).unwrap();
         let ratio = derive_unit_ratio(curr_pairset);
         let riskleg_ust_value = unmatched_unit_asset.amount
                                 .checked_mul(ratio).unwrap()
-                                .checked_div(Uint128::from(STABLELEG_DENOMINATOR)).unwrap();
+                                .checked_div( get_pow10(STABLELEG_DENOMINATOR) ).unwrap();
 
         if ust_portion > riskleg_ust_value {
             curr_pairset.stableleg.amount += riskleg_ust_value;
@@ -248,7 +275,7 @@ fn actual_paring(
             curr_pairset.stableleg.amount += ust_portion;
 
             let provided_riskleg_amount = ust_portion
-                                            .checked_mul(Uint128::from(STABLELEG_DENOMINATOR)).unwrap()
+                                            .checked_mul( get_pow10(STABLELEG_DENOMINATOR) ).unwrap()
                                             .checked_div(unmatched_unit_asset.amount).unwrap();
             curr_pairset.riskleg.amount += provided_riskleg_amount;
 
@@ -267,9 +294,11 @@ fn calculate_weight_unmatched_assets(
     let mut whole_portion = Uint128::from(0u128);
 
     for (token_name, unit_asset) in unmatched_assets.iter() {
+        if *token_name == String::from(UUSD) { continue; }
+
         let pairset = match curr_pairs.get(token_name) {
             Some(pairinfo) => pairinfo,
-            None => return Err(StdError::not_found("no pair info")),
+            None => return Err(StdError::not_found(format!("no pair info {}", token_name))),
         };
 
         let ratio = derive_unit_ratio(pairset);
@@ -281,7 +310,7 @@ fn calculate_weight_unmatched_assets(
     
     for (_, val) in res.iter_mut() {
         *val = val
-                .checked_mul(Uint128::from(u128::pow(10, STABLELEG_DENOMINATOR))).unwrap()
+                .checked_mul(get_pow10(STABLELEG_DENOMINATOR)).unwrap()
                 .checked_div(whole_portion).unwrap();
     }
 
@@ -295,11 +324,11 @@ fn derive_unit_ratio(
     // 10^6 is already multiplied
     if unit_pair.riskleg_denominator < STABLELEG_DENOMINATOR {
         unit_pair.riskleg.amount
-            .checked_mul(Uint128::from(u128::pow(10, 2 * STABLELEG_DENOMINATOR - unit_pair.riskleg_denominator))).unwrap()
+            .checked_mul( get_pow10(2 * STABLELEG_DENOMINATOR - unit_pair.riskleg_denominator) ).unwrap()
             .checked_div(unit_pair.stableleg.amount).unwrap()
     } else {
         unit_pair.riskleg.amount
-            .checked_mul(Uint128::from(u128::pow(10, unit_pair.riskleg_denominator))).unwrap()
+            .checked_mul( get_pow10(unit_pair.riskleg_denominator) ).unwrap()
             .checked_div(unit_pair.stableleg.amount).unwrap()
     }
 }
@@ -308,5 +337,106 @@ fn get_asset_name(asset: Asset) -> String {
     match asset.info {
         AssetInfo::NativeToken{ denom } => denom,
         AssetInfo::Token{ contract_addr } => contract_addr,      
+    }
+}
+
+fn get_pow10(denom: u32) -> Uint128 {
+    Uint128::from(u128::pow(10, denom))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    const LUNA: &str = "uluna";
+    const ANC: &str = "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76";
+    const SMALL: &str = "msmall";
+    const BIG: &str = "pbig";
+
+    fn initilaizer() -> NewCalculatedBalacedAssets {
+        let new_virtual_pairs = HashMap::from([
+            (
+                String::from(LUNA),
+                Pairset{
+                    riskleg: _asset_generator(LUNA, 100, STABLELEG_DENOMINATOR),
+                    riskleg_denominator: 6,
+                    stableleg: _asset_generator(UUSD, 10000, STABLELEG_DENOMINATOR),
+                }
+            ),
+            (
+                String::from(ANC),
+                Pairset{
+                    riskleg: _asset_generator(ANC, 1000, STABLELEG_DENOMINATOR),
+                    riskleg_denominator: 6,
+                    stableleg: _asset_generator(UUSD, 1000, STABLELEG_DENOMINATOR),
+                }
+            ),
+            (
+                String::from(SMALL),
+                Pairset{
+                    riskleg: _asset_generator(SMALL, 10000, 4),
+                    riskleg_denominator: 6,
+                    stableleg: _asset_generator(UUSD, 100, STABLELEG_DENOMINATOR),
+                }
+            ),
+            (
+                String::from(BIG),
+                Pairset{
+                    riskleg: _asset_generator(BIG, 10000, 9),
+                    riskleg_denominator: 6,
+                    stableleg: _asset_generator(UUSD, 1000000, STABLELEG_DENOMINATOR),
+                }
+            ),
+        ]);
+
+        NewCalculatedBalacedAssets {
+            new_virtual_pairs: new_virtual_pairs,
+            new_unmatched_assets: HashMap::new(),
+            new_reserved_asset: _asset_generator(UUSD, 100000, STABLELEG_DENOMINATOR), // meaningless
+            new_used_reserved_asset: _asset_generator(UUSD, 0, STABLELEG_DENOMINATOR), // meaningless
+            reserve_usage_ratio: Uint128::from(10000u128), // 10%
+        }
+    }
+
+    #[test]
+    fn test001_stable_provide_unmatched_stable() {
+        let mut before_state = initilaizer();
+
+        let incoming_provide = _asset_generator(UUSD, 100, STABLELEG_DENOMINATOR);
+        let unmatched_asset = HashMap::from([
+            (String::from(UUSD), _asset_generator(UUSD, 100, STABLELEG_DENOMINATOR))
+        ]);
+        let reserved_ust = _asset_generator(UUSD, 100000, STABLELEG_DENOMINATOR);
+        before_state.new_unmatched_assets = unmatched_asset;
+        before_state.new_reserved_asset = reserved_ust;
+
+        let after_state = calculate_balanced_assets(
+            true,
+            incoming_provide,
+            before_state.new_virtual_pairs,
+            before_state.new_unmatched_assets,
+            before_state.new_reserved_asset,
+            before_state.new_used_reserved_asset,
+            before_state.reserve_usage_ratio,
+        ).unwrap();
+
+        let mut expected_state = initilaizer();
+        expected_state.new_unmatched_assets.insert(String::from(UUSD), _asset_generator(UUSD, 100, STABLELEG_DENOMINATOR));
+
+        println!("Expected state:");
+        println!("{}", expected_state);
+        println!();
+        println!("Actual:");
+        println!("{}", after_state);
+
+        assert_eq!(after_state, expected_state);
+    }
+
+    fn _asset_generator(symbol: &str, amount: u128, denom: u32) -> Asset {
+        Asset {
+            info: AssetInfo::NativeToken { denom: String::from(symbol) },
+            amount: Uint128::from(amount)
+                        .checked_mul(get_pow10(denom)).unwrap(),
+        }
     }
 }
