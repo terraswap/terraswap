@@ -18,9 +18,9 @@ pub const CONFIG: Item<Config> = Item::new("\u{0}\u{6}config");
 mod test {
     use super::*;
 
-    use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Api, StdResult, Storage};
     use cosmwasm_storage::{singleton, singleton_read};
+    use terraswap::mock_querier::mock_dependencies;
     const KEY_CONFIG: &[u8] = b"config";
 
     pub fn store_config(storage: &mut dyn Storage, config: &Config) -> StdResult<()> {

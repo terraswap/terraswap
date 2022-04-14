@@ -7,8 +7,8 @@ use terraswap::mock_querier::mock_dependencies;
 
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, BankMsg, Coin, ContractResult, CosmosMsg, Decimal, Reply, ReplyOn, Response,
-    StdError, SubMsg, SubMsgExecutionResponse, Uint128, WasmMsg,
+    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg,
+    SubMsgExecutionResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
@@ -68,7 +68,7 @@ fn proper_initialization() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgExecutionResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -132,7 +132,7 @@ fn provide_liquidity() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgExecutionResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -542,7 +542,7 @@ fn withdraw_liquidity() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgExecutionResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -663,7 +663,7 @@ fn try_native_to_token() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgExecutionResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -843,7 +843,7 @@ fn try_token_to_native() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgExecutionResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -1252,7 +1252,7 @@ fn test_query_pool() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgExecutionResponse {
             events: vec![],
             data: Some(
                 vec![

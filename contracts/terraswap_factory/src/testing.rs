@@ -1,12 +1,13 @@
 use crate::contract::{execute, instantiate, query, reply};
+use terra_cosmwasm::TerraQueryWrapper;
 use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
 
 use crate::state::{pair_key, TmpPairInfo, TMP_PAIR_INFO};
 
 use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockStorage};
 use cosmwasm_std::{
-    attr, from_binary, to_binary, ContractResult, OwnedDeps, Reply, ReplyOn, StdError, SubMsg,
-    SubMsgExecutionResponse, Uint128, WasmMsg,
+    attr, from_binary, to_binary, OwnedDeps, Reply, ReplyOn, StdError, SubMsg,
+    SubMsgExecutionResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use terraswap::asset::{AssetInfo, PairInfo};
 use terraswap::factory::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -101,8 +102,8 @@ fn update_config() {
 }
 
 fn init(
-    mut deps: OwnedDeps<MockStorage, MockApi, WasmMockQuerier>,
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+    mut deps: OwnedDeps<MockStorage, MockApi, WasmMockQuerier, TerraQueryWrapper>,
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, TerraQueryWrapper> {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
@@ -411,7 +412,7 @@ fn reply_test() {
 
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgExecutionResponse {
             events: vec![],
             data: Some(vec![10, 4, 48, 48, 48, 48].into()),
         }),

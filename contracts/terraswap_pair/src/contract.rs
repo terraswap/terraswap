@@ -16,6 +16,7 @@ use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
 use std::cmp::Ordering;
 use std::str::FromStr;
+use terra_cosmwasm::TerraQueryWrapper;
 use terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
 use terraswap::pair::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, PoolResponse, QueryMsg,
@@ -30,7 +31,7 @@ const INSTANTIATE_REPLY_ID: u64 = 1;
 const COMMISSION_RATE: &str = "0.003";
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -73,7 +74,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -116,7 +117,7 @@ pub fn execute(
 }
 
 pub fn receive_cw20(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
@@ -183,7 +184,7 @@ pub fn receive_cw20(
 
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+pub fn reply(deps: DepsMut<TerraQueryWrapper>, _env: Env, msg: Reply) -> StdResult<Response> {
     let data = msg.result.unwrap().data.unwrap();
     let res: MsgInstantiateContractResponse =
         Message::parse_from_bytes(data.as_slice()).map_err(|_| {
@@ -202,7 +203,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
 /// CONTRACT - should approve contract to use the amount of token
 pub fn provide_liquidity(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     info: MessageInfo,
     assets: [Asset; 2],
@@ -298,7 +299,7 @@ pub fn provide_liquidity(
 }
 
 pub fn withdraw_liquidity(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     _info: MessageInfo,
     sender: Addr,
@@ -352,7 +353,7 @@ pub fn withdraw_liquidity(
 // CONTRACT - a user must do token approval
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
-    deps: DepsMut,
+    deps: DepsMut<TerraQueryWrapper>,
     env: Env,
     info: MessageInfo,
     sender: Addr,
@@ -433,7 +434,11 @@ pub fn swap(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(
+    deps: Deps<TerraQueryWrapper>,
+    _env: Env,
+    msg: QueryMsg,
+) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Pair {} => Ok(to_binary(&query_pair_info(deps)?)?),
         QueryMsg::Pool {} => Ok(to_binary(&query_pool(deps)?)?),
@@ -446,14 +451,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     }
 }
 
-pub fn query_pair_info(deps: Deps) -> Result<PairInfo, ContractError> {
+pub fn query_pair_info(deps: Deps<TerraQueryWrapper>) -> Result<PairInfo, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let pair_info = pair_info.to_normal(deps.api)?;
 
     Ok(pair_info)
 }
 
-pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
+pub fn query_pool(deps: Deps<TerraQueryWrapper>) -> Result<PoolResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let contract_addr = deps.api.addr_humanize(&pair_info.contract_addr)?;
     let assets: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, contract_addr)?;
@@ -471,7 +476,7 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
 }
 
 pub fn query_simulation(
-    deps: Deps,
+    deps: Deps<TerraQueryWrapper>,
     offer_asset: Asset,
 ) -> Result<SimulationResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -502,7 +507,7 @@ pub fn query_simulation(
 }
 
 pub fn query_reverse_simulation(
-    deps: Deps,
+    deps: Deps<TerraQueryWrapper>,
     ask_asset: Asset,
 ) -> Result<ReverseSimulationResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -544,7 +549,7 @@ fn compute_swap(
     ask_pool: Uint128,
     offer_amount: Uint128,
 ) -> (Uint128, Uint128, Uint128) {
-    let offer_pool: Uint256 = offer_pool.into();
+    let offer_pool: Uint256 = Uint256::from(offer_pool);
     let ask_pool: Uint256 = ask_pool.into();
     let offer_amount: Uint256 = offer_amount.into();
 
@@ -632,7 +637,7 @@ fn compute_offer_amount(
 /// we compute new spread else we just use terraswap
 /// spread to check `max_spread`
 pub fn assert_max_spread(
-    deps: Deps,
+    deps: Deps<TerraQueryWrapper>,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     offer_asset: Asset,
