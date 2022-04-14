@@ -358,33 +358,33 @@ mod test {
             (
                 String::from(LUNA),
                 Pairset{
-                    riskleg: _asset_generator(LUNA, 100, STABLELEG_DENOMINATOR),
+                    riskleg: _asset_generator(LUNA, true, 100, STABLELEG_DENOMINATOR),
                     riskleg_denominator: 6,
-                    stableleg: _asset_generator(UUSD, 10000, STABLELEG_DENOMINATOR),
+                    stableleg: _asset_generator(UUSD, true, 10000, STABLELEG_DENOMINATOR),
                 }
             ),
             (
                 String::from(ANC),
                 Pairset{
-                    riskleg: _asset_generator(ANC, 1000, STABLELEG_DENOMINATOR),
+                    riskleg: _asset_generator(ANC, false, 1000, STABLELEG_DENOMINATOR),
                     riskleg_denominator: 6,
-                    stableleg: _asset_generator(UUSD, 1000, STABLELEG_DENOMINATOR),
+                    stableleg: _asset_generator(UUSD, true, 1000, STABLELEG_DENOMINATOR),
                 }
             ),
             (
                 String::from(SMALL),
                 Pairset{
-                    riskleg: _asset_generator(SMALL, 10000, 4),
-                    riskleg_denominator: 6,
-                    stableleg: _asset_generator(UUSD, 100, STABLELEG_DENOMINATOR),
+                    riskleg: _asset_generator(SMALL, true, 10000, 4),
+                    riskleg_denominator: 4,
+                    stableleg: _asset_generator(UUSD, true, 100, STABLELEG_DENOMINATOR),
                 }
             ),
             (
                 String::from(BIG),
                 Pairset{
-                    riskleg: _asset_generator(BIG, 10000, 9),
-                    riskleg_denominator: 6,
-                    stableleg: _asset_generator(UUSD, 1000000, STABLELEG_DENOMINATOR),
+                    riskleg: _asset_generator(BIG, true, 10000, 9),
+                    riskleg_denominator: 9,
+                    stableleg: _asset_generator(UUSD, true, 1000000, STABLELEG_DENOMINATOR),
                 }
             ),
         ]);
@@ -392,8 +392,8 @@ mod test {
         NewCalculatedBalacedAssets {
             new_virtual_pairs: new_virtual_pairs,
             new_unmatched_assets: HashMap::new(),
-            new_reserved_asset: _asset_generator(UUSD, 100000, STABLELEG_DENOMINATOR), // meaningless
-            new_used_reserved_asset: _asset_generator(UUSD, 0, STABLELEG_DENOMINATOR), // meaningless
+            new_reserved_asset: _asset_generator(UUSD, true, 100000, STABLELEG_DENOMINATOR), // meaningless
+            new_used_reserved_asset: _asset_generator(UUSD, true, 0, STABLELEG_DENOMINATOR), // meaningless
             reserve_usage_ratio: Uint128::from(10000u128), // 10%
         }
     }
@@ -402,11 +402,11 @@ mod test {
     fn test001_stable_provide_unmatched_stable() {
         let mut before_state = initilaizer();
 
-        let incoming_provide = _asset_generator(UUSD, 100, STABLELEG_DENOMINATOR);
+        let incoming_provide = _asset_generator(UUSD, true, 100, STABLELEG_DENOMINATOR);
         let unmatched_asset = HashMap::from([
-            (String::from(UUSD), _asset_generator(UUSD, 100, STABLELEG_DENOMINATOR))
+            (String::from(UUSD), _asset_generator(UUSD, true, 100, STABLELEG_DENOMINATOR))
         ]);
-        let reserved_ust = _asset_generator(UUSD, 100000, STABLELEG_DENOMINATOR);
+        let reserved_ust = _asset_generator(UUSD, true, 100000, STABLELEG_DENOMINATOR);
         before_state.new_unmatched_assets = unmatched_asset;
         before_state.new_reserved_asset = reserved_ust;
 
@@ -421,22 +421,37 @@ mod test {
         ).unwrap();
 
         let mut expected_state = initilaizer();
-        expected_state.new_unmatched_assets.insert(String::from(UUSD), _asset_generator(UUSD, 100, STABLELEG_DENOMINATOR));
+        expected_state.new_unmatched_assets.insert(String::from(UUSD), _asset_generator(UUSD, true, 100, STABLELEG_DENOMINATOR));
+
+        _state_print(&after_state, &expected_state);
+        assert_eq!(after_state, expected_state);
+    }
+
+    fn _asset_generator(symbol: &str, is_native: bool, amount: u128, denom: u32) -> Asset {
+        match is_native {
+            true => 
+                Asset {
+                    info: AssetInfo::NativeToken { denom: String::from(symbol) },
+                    amount: Uint128::from(amount)
+                                .checked_mul(get_pow10(denom)).unwrap(),
+                },
+            false => 
+                Asset {
+                    info: AssetInfo::Token { contract_addr: String::from(symbol) },
+                    amount: Uint128::from(amount)
+                                .checked_mul(get_pow10(denom)).unwrap(),
+                },
+        }
+    }
+
+    fn _state_print(
+        after_state: &NewCalculatedBalacedAssets,
+        expected_state: &NewCalculatedBalacedAssets) {
 
         println!("Expected state:");
         println!("{}", expected_state);
         println!();
         println!("Actual:");
         println!("{}", after_state);
-
-        assert_eq!(after_state, expected_state);
-    }
-
-    fn _asset_generator(symbol: &str, amount: u128, denom: u32) -> Asset {
-        Asset {
-            info: AssetInfo::NativeToken { denom: String::from(symbol) },
-            amount: Uint128::from(amount)
-                        .checked_mul(get_pow10(denom)).unwrap(),
-        }
     }
 }
