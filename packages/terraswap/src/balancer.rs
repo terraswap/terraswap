@@ -16,16 +16,14 @@ pub struct NewCalculatedBalacedAssets {
 impl fmt::Display for NewCalculatedBalacedAssets {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut new_virtual_pairs_vec: Vec<String> = self.new_virtual_pairs.iter()
-                                                    .map(|(k, v)|{
-                                                        format!("{} / {}", *k , *v)
-                                                    }).collect();
+                                                    .map(|(k, v)| format!("{} / {}", *k , *v) )
+                                                    .collect();
         new_virtual_pairs_vec.sort();
         let new_virtual_pairs_str = new_virtual_pairs_vec.join("\n");
 
         let mut new_unmatched_assets_vec: Vec<String> = self.new_unmatched_assets.iter()
-                                                    .map(|(k, v)|{
-                                                        format!("{} / {}", *k, *v)
-                                                    }).collect();
+                                                    .map(|(k, v)| format!("{} / {}", *k, *v) )
+                                                    .collect();
         new_unmatched_assets_vec.sort();
         let new_unmatched_assets_str = new_unmatched_assets_vec.join("\n");
 
@@ -74,12 +72,13 @@ pub fn calculate_balanced_assets(
         reserve_usage_ratio: reserve_usage_ratio,
     };
 
-    // provide
     if is_provide {
+        // provide
+
         // If the protocol has used the reserved UST + the provided currency is stableleg
         // -> pay back first
         let mut is_stableleg_provide = false;
-        let asset_name = get_asset_name(asset);
+        let asset_name = get_asset_name(&asset);
         if asset_name == String::from(UUSD) {
             is_stableleg_provide = true;
             (temp_input_asset, res) = reserve_asset_process(temp_input_asset, res);
@@ -102,6 +101,76 @@ pub fn calculate_balanced_assets(
         
     } else {
         // withdraw
+
+        // check the unmatched assets
+        let withdraw_asset_name = get_asset_name(&asset);
+        if res.new_unmatched_assets.contains_key(&withdraw_asset_name) {
+            let mut unit_unmatched_asset = res.new_unmatched_assets.get_mut(&withdraw_asset_name).unwrap();
+            if asset.amount < unit_unmatched_asset.amount {
+                // If unmatched asset is same as withdraw asset type
+                // withdraw asset amount < Unmatched asset
+                //   -> withdraw from the unmached asset, and do nothing more
+                unit_unmatched_asset.amount -= asset.amount;
+                return Ok(res);
+
+            } else {
+                // If unmatched asset is same as withdraw asset type
+                // withdraw asset amount >= Unmatched asset
+                //   -> withdraw all unmacthed asset
+                //      Need addtional assets for withdraw. Make it by pair withdraw
+                temp_input_asset.amount -= unit_unmatched_asset.amount;
+                unit_unmatched_asset.amount = Uint128::zero();
+
+                res.new_unmatched_assets.retain(|_, v| v.amount != Uint128::zero());
+
+                // will not return. Proceed to the forward
+            }
+        }
+
+        if withdraw_asset_name == String::from(UUSD) {
+            // UST withdraw -> weight withdraw from all pairs
+
+            let possible_use_reserve_ust = res.new_reserved_asset.amount
+                                              .checked_mul( res.reserve_usage_ratio ).unwrap()
+                                              .checked_div( get_pow10(STABLELEG_DENOMINATOR) ).unwrap();
+
+            if temp_input_asset.amount < possible_use_reserve_ust {
+                res.new_reserved_asset.amount -= temp_input_asset.amount;
+                res.new_used_reserved_asset.amount += temp_input_asset.amount;
+
+                return Ok(res);
+            } else {
+                temp_input_asset.amount -= possible_use_reserve_ust;
+                res.new_used_reserved_asset.amount += possible_use_reserve_ust;
+
+                (res.new_virtual_pairs, res.new_unmatched_assets) =
+                        try_withdrawing_with_ust(&temp_input_asset,res.new_virtual_pairs, res.new_unmatched_assets);
+
+                res = try_pairing_with_unmatched_assets(res.new_unmatched_assets.clone(), res);
+            }
+        } else {
+            // Risk withdraw -> only one pair withdraw
+
+            let withdrawal_pair = res.new_virtual_pairs.get_mut(&withdraw_asset_name).unwrap();
+            let withdrawal_ust = derive_unit_ratio(withdrawal_pair)
+                                    .checked_mul(temp_input_asset.amount).unwrap()
+                                    .checked_div(get_pow10(STABLELEG_DENOMINATOR)).unwrap();
+
+            withdrawal_pair.riskleg.amount -= temp_input_asset.amount;
+            withdrawal_pair.stableleg.amount -= withdrawal_ust;
+
+            // unmached asset `withdrawal_ust`
+            // reserve processing
+            let mut unpaired_ust = _asset_generator_raw(UUSD, true, withdrawal_ust);
+            (unpaired_ust, res) = reserve_asset_process(unpaired_ust, res);
+
+            if unpaired_ust.amount > Uint128::zero() {
+                let zero_ust = _asset_generator(UUSD, true, 0, STABLELEG_DENOMINATOR);
+                let unmatched_ust = res.new_unmatched_assets.entry(String::from(UUSD)).or_insert(zero_ust);
+
+                unmatched_ust.amount += unpaired_ust.amount;
+            }
+        }
     }
 
     return Ok(res);
@@ -129,7 +198,7 @@ fn put_unmatched_asset(
     mut balanced_assets_info: NewCalculatedBalacedAssets
 ) -> NewCalculatedBalacedAssets {
     for unit_asset in input_assets.iter() {
-        let token_name = get_asset_name(unit_asset.clone());
+        let token_name = get_asset_name(&unit_asset);
         let mut zero_asset = unit_asset.clone();
         zero_asset.amount = Uint128::zero();
 
@@ -148,8 +217,8 @@ fn try_pairing_with_unmatched_assets(
     mut balanced_assets_info: NewCalculatedBalacedAssets
 ) -> NewCalculatedBalacedAssets {
     let portions = calculate_weight_unmatched_assets(
-        balanced_assets_info.new_virtual_pairs.clone(),
-        balanced_assets_info.new_unmatched_assets.clone(),
+        &balanced_assets_info.new_virtual_pairs,
+        &balanced_assets_info.new_unmatched_assets,
     ).unwrap();
     
     let mut provided_ust = &mut _asset_generator(UUSD, true, 0, STABLELEG_DENOMINATOR);
@@ -198,7 +267,7 @@ fn try_pairing_with_unmatched_assets(
 
     let mut is_unmatched_riskleg = false;
     for (_, unmatched_unit_asset) in balanced_assets_info.new_unmatched_assets.iter_mut() {
-        if unmatched_unit_asset.amount > Uint128::zero() && get_asset_name(unmatched_unit_asset.clone()) != String::from(UUSD) {
+        if unmatched_unit_asset.amount > Uint128::zero() && get_asset_name(&unmatched_unit_asset) != String::from(UUSD) {
             is_unmatched_riskleg = true;
             break;
         }
@@ -231,6 +300,36 @@ fn try_pairing_with_unmatched_assets(
     balanced_assets_info.new_unmatched_assets.retain(|_, v| v.amount != Uint128::zero() );
 
     balanced_assets_info
+}
+
+fn try_withdrawing_with_ust(
+    required_ust: &Asset,
+    mut pairset: HashMap<String, Pairset>,
+    mut unmatched_asset: HashMap<String, Asset>,
+) -> (HashMap<String, Pairset>, HashMap<String, Asset>) {
+
+    let portion = calculate_weight_from_whole_pairs(&pairset).unwrap();
+    for (unit_token_name, unit_pair) in pairset.iter_mut() {
+        if *unit_token_name == String::from(UUSD) { continue; }
+
+        let unit_withdraw_ust = required_ust.amount
+                                .checked_mul(*portion.get(unit_token_name).unwrap()).unwrap()
+                                .checked_div(get_pow10(STABLELEG_DENOMINATOR)).unwrap();
+        let unit_withdraw_risk = unit_pair.riskleg.amount
+                                .checked_mul(*portion.get(unit_token_name).unwrap()).unwrap()
+                                .checked_div(get_pow10(STABLELEG_DENOMINATOR)).unwrap();
+
+        unit_pair.stableleg.amount -= unit_withdraw_ust;
+        unit_pair.riskleg.amount -= unit_withdraw_risk;
+
+        let mut unit_zero_risk = unit_pair.riskleg.clone();
+        unit_zero_risk.amount = Uint128::zero();
+
+        let unit_unmatched_asset_entry = unmatched_asset.entry(unit_token_name.clone()).or_insert(unit_zero_risk);
+        unit_unmatched_asset_entry.amount += unit_withdraw_risk;
+    }
+    
+    (pairset, unmatched_asset)
 }
 
 fn actual_paring(
@@ -278,8 +377,8 @@ fn actual_paring(
 }
 
 fn calculate_weight_unmatched_assets(
-    curr_pairs: HashMap<String, Pairset>,
-    unmatched_assets: HashMap<String, Asset>
+    curr_pairs: &HashMap<String, Pairset>,
+    unmatched_assets: &HashMap<String, Asset>
 ) -> StdResult<HashMap<String, Uint128>> {
     let mut res: HashMap<String, Uint128> = HashMap::new();
     let mut whole_portion = Uint128::from(0u128);
@@ -309,6 +408,28 @@ fn calculate_weight_unmatched_assets(
     Ok(res)
 }
 
+fn calculate_weight_from_whole_pairs(
+    curr_pairs: &HashMap<String, Pairset>,
+) -> StdResult<HashMap<String, Uint128>> {
+    let mut res: HashMap<String, Uint128> = HashMap::new();
+    let mut whole_portion = Uint128::from(0u128);
+
+    for (token_name, unit_pair) in curr_pairs.iter() {
+        let ust_value = unit_pair.stableleg.amount;
+        whole_portion += ust_value;
+
+        res.insert(token_name.clone(), ust_value.clone());
+    }
+    
+    for (_, val) in res.iter_mut() {
+        *val = val
+                .checked_mul(get_pow10(STABLELEG_DENOMINATOR)).unwrap()
+                .checked_div(whole_portion).unwrap();
+    }
+
+    Ok(res)
+}
+
 fn _asset_generator(symbol: &str, is_native: bool, amount: u128, denom: u32) -> Asset {
     match is_native {
         true => 
@@ -322,6 +443,21 @@ fn _asset_generator(symbol: &str, is_native: bool, amount: u128, denom: u32) -> 
                 info: AssetInfo::Token { contract_addr: String::from(symbol) },
                 amount: Uint128::from(amount)
                             .checked_mul(get_pow10(denom)).unwrap(),
+            },
+    }
+}
+
+fn _asset_generator_raw(symbol: &str, is_native: bool, amount: Uint128) -> Asset {
+    match is_native {
+        true => 
+            Asset {
+                info: AssetInfo::NativeToken { denom: String::from(symbol) },
+                amount: amount,
+            },
+        false => 
+            Asset {
+                info: AssetInfo::Token { contract_addr: String::from(symbol) },
+                amount: amount,
             },
     }
 }
@@ -342,10 +478,10 @@ fn derive_unit_ratio(
     }
 }
 
-fn get_asset_name(asset: Asset) -> String {
-    match asset.info {
-        AssetInfo::NativeToken{ denom } => denom,
-        AssetInfo::Token{ contract_addr } => contract_addr,      
+fn get_asset_name(asset: &Asset) -> String {
+    match &asset.info {
+        AssetInfo::NativeToken{ denom } => denom.clone(),
+        AssetInfo::Token{ contract_addr } => contract_addr.clone(),
     }
 }
 
@@ -409,7 +545,7 @@ mod test {
 
     #[test]
     fn test001_stable_provide_unmatched_stable() {
-        // Provide stabeleg
+        // Provide stableleg
         // Stable asset exists in the unmatched assets
 
         let mut before_state = initilaizer();
@@ -441,7 +577,7 @@ mod test {
 
     #[test]
     fn test002_stable_provide_unmatched_risk_1() {
-        // Provide stabeleg
+        // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset > Unmatched assets
 
@@ -481,7 +617,7 @@ mod test {
 
     #[test]
     fn test003_stable_provide_unmatched_risk_2() {
-        // Provide stabeleg
+        // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
 
