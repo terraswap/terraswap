@@ -79,19 +79,11 @@ pub fn calculate_balanced_assets(
         // If the protocol has used the reserved UST + the provided currency is stableleg
         // -> pay back first
         let mut is_stableleg_provide = false;
-        match asset.info {
-            AssetInfo::NativeToken{ denom } => match denom.as_str() {
-                // TODO: how to treat 'ukrw' + how to avoid 'uluna' & IBC tokens
-                UUSD => {
-                    is_stableleg_provide = true;
-                    if used_reserved_asset.amount > Uint128::zero() {
-                        (temp_input_asset, res) = reserve_asset_process(temp_input_asset, res);
-                    }
-                },
-                _ => (),
-            },
-            _ => (),
-        };
+        let asset_name = get_asset_name(asset);
+        if asset_name == String::from(UUSD) {
+            is_stableleg_provide = true;
+            (temp_input_asset, res) = reserve_asset_process(temp_input_asset, res);
+        }
 
         // If paid back complete, nothing to do. Done it.
         if temp_input_asset.amount == Uint128::zero() { return Ok(res); }
