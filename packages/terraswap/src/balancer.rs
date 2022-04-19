@@ -291,8 +291,8 @@ fn try_pairing_with_unmatched_assets(
             balanced_assets_info.new_unmatched_assets.iter_mut()
         );
 
-        balanced_assets_info.new_reserved_asset.amount += before_reserve_ust.amount - after_reserve_ust.amount;
-        balanced_assets_info.new_used_reserved_asset.amount -= before_reserve_ust.amount - after_reserve_ust.amount;
+        balanced_assets_info.new_reserved_asset.amount -= before_reserve_ust.amount - after_reserve_ust.amount;
+        balanced_assets_info.new_used_reserved_asset.amount += before_reserve_ust.amount - after_reserve_ust.amount;
         balanced_assets_info.new_virtual_pairs = new_virtual_pairs;
     }
 
@@ -343,6 +343,7 @@ fn actual_paring(
     for (token_name, unmatched_unit_asset) in enumerated_assets {
         if *token_name == String::from(UUSD) { continue; }
 
+        // Calculate UST portion of all unmatched assets
         let ust_portion = provided_ust.amount
                             .checked_mul(
                                 *portions.get(token_name)
@@ -350,6 +351,7 @@ fn actual_paring(
                             ).unwrap()
                             .checked_div( get_pow10(STABLELEG_DENOMINATOR) ).unwrap();
 
+        // Calculate the UST value of the unmatched asset
         let curr_pairset = pairset.get_mut(token_name).unwrap();
         let ratio = derive_unit_ratio(curr_pairset);
         let riskleg_ust_value = unmatched_unit_asset.amount
@@ -366,7 +368,7 @@ fn actual_paring(
 
             let provided_riskleg_amount = ust_portion
                                             .checked_mul( get_pow10(STABLELEG_DENOMINATOR) ).unwrap()
-                                            .checked_div(unmatched_unit_asset.amount).unwrap();
+                                            .checked_div(ratio).unwrap();
             curr_pairset.riskleg.amount += provided_riskleg_amount;
 
             unmatched_unit_asset.amount -= provided_riskleg_amount;
@@ -381,9 +383,10 @@ fn calculate_weight_unmatched_assets(
     unmatched_assets: &HashMap<String, Asset>
 ) -> StdResult<HashMap<String, Uint128>> {
     let mut res: HashMap<String, Uint128> = HashMap::new();
-    let mut whole_portion = Uint128::from(0u128);
+    let mut whole_portion = Uint128::zero();
 
     for (token_name, unit_asset) in unmatched_assets.iter() {
+        // Calculate the UST value of each asset, and summize
         if *token_name == String::from(UUSD) { continue; }
 
         let pairset = match curr_pairs.get(token_name) {
@@ -391,15 +394,16 @@ fn calculate_weight_unmatched_assets(
             None => return Err(StdError::not_found(format!("no pair info {}", token_name))),
         };
 
-        let ratio = derive_unit_ratio(pairset);
-        let portion = unit_asset.amount.checked_mul(ratio).unwrap()
+        let unit_asset_price = derive_unit_ratio(pairset);
+        let portion = unit_asset.amount.checked_mul(unit_asset_price).unwrap()
                                 .checked_div(get_pow10(STABLELEG_DENOMINATOR)).unwrap();
         whole_portion += portion.clone();
 
-        res.insert(token_name.clone(), ratio);
+        res.insert(token_name.clone(), portion);
     }
     
     for (_, val) in res.iter_mut() {
+        // Divide by whole portion
         *val = val
                 .checked_mul(get_pow10(STABLELEG_DENOMINATOR)).unwrap()
                 .checked_div(whole_portion).unwrap();
@@ -465,17 +469,9 @@ fn _asset_generator_raw(symbol: &str, is_native: bool, amount: Uint128) -> Asset
 fn derive_unit_ratio(
     unit_pair: &Pairset
 ) -> Uint128 {
-    // Riskleg amount * 10^6 / stableleg
-    // 10^6 is already multiplied
-    if unit_pair.riskleg_denominator < STABLELEG_DENOMINATOR {
-        unit_pair.stableleg.amount
-            .checked_mul( get_pow10(2 * STABLELEG_DENOMINATOR - unit_pair.riskleg_denominator) ).unwrap()
-            .checked_div(unit_pair.riskleg.amount).unwrap()
-    } else {
-        unit_pair.stableleg.amount
-            .checked_mul( get_pow10(unit_pair.riskleg_denominator) ).unwrap()
-            .checked_div(unit_pair.riskleg.amount).unwrap()
-    }
+    unit_pair.stableleg.amount
+        .checked_mul( get_pow10(unit_pair.riskleg_denominator) ).unwrap()
+        .checked_div(unit_pair.riskleg.amount).unwrap()
 }
 
 fn get_asset_name(asset: &Asset) -> String {
@@ -539,7 +535,7 @@ mod test {
             new_unmatched_assets: HashMap::new(),
             new_reserved_asset: _asset_generator(UUSD, true, 100000, STABLELEG_DENOMINATOR), // meaningless
             new_used_reserved_asset: _asset_generator(UUSD, true, 0, STABLELEG_DENOMINATOR), // meaningless
-            reserve_usage_ratio: Uint128::from(10000u128), // 10%
+            reserve_usage_ratio: Uint128::from(100000u128), // 10%
         }
     }
 
