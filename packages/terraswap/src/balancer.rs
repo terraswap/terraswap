@@ -860,6 +860,62 @@ mod test {
         assert_eq!(after_state, expected_state);
     }
 
+    #[test]
+    fn test008_stable_provide_unmatched_risk_7() {
+        // Provide stableleg
+        // Risk asset exists in the unmatched assets
+        // Provided asset < Unmatched assets
+        // Big reserve
+        // Used reserve exists
+
+        let mut before_state = initilaizer();
+
+        let incoming_provide = _asset_generator(UUSD, true, 1000, STABLELEG_DENOMINATOR);
+        let unmatched_asset = HashMap::from([
+            (String::from(LUNA), _asset_generator(LUNA, true, 10, STABLELEG_DENOMINATOR)),
+            (String::from(ANC), _asset_generator(ANC, false, 10, STABLELEG_DENOMINATOR))
+        ]);
+        let reserved_ust = _asset_generator(UUSD, true, 99100, STABLELEG_DENOMINATOR);
+        let used_reserved_ust = _asset_generator(UUSD, true, 900, STABLELEG_DENOMINATOR);
+
+        before_state.new_unmatched_assets = unmatched_asset;
+        before_state.new_reserved_asset = reserved_ust;
+        before_state.new_used_reserved_asset = used_reserved_ust;
+
+        let after_state = calculate_balanced_assets(
+            true,
+            incoming_provide,
+            before_state.new_virtual_pairs,
+            before_state.new_unmatched_assets,
+            before_state.new_reserved_asset,
+            before_state.new_used_reserved_asset,
+            before_state.reserve_usage_ratio,
+        ).unwrap();
+
+        let mut expected_state = initilaizer();
+        let luna_pair = expected_state.new_virtual_pairs.get_mut(&String::from(LUNA)).unwrap();
+        *luna_pair = Pairset{
+            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(110_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(11000_000000u128)),
+        };
+
+        let anc_pair = expected_state.new_virtual_pairs.get_mut(&String::from(ANC)).unwrap();
+        *anc_pair = Pairset{
+            riskleg: _asset_generator_raw(ANC, false, Uint128::from(1010_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(1010_000000u128)),
+        };
+
+        expected_state.new_unmatched_assets = HashMap::from([]);
+
+        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(99089_989900u128));
+        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(910_010100u128));
+
+        _state_print(&after_state, &expected_state);
+        assert_eq!(after_state, expected_state);
+    }
+
     fn _state_print(
         after_state: &NewCalculatedBalacedAssets,
         expected_state: &NewCalculatedBalacedAssets) {
