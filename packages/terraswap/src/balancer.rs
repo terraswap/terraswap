@@ -269,6 +269,18 @@ fn try_pairing_with_unmatched_assets(
             balanced_assets_info.new_virtual_pairs,
             input_assets.iter_mut()
         );
+
+        // reforming input asset -> unmatched asset if riskleg input is remained
+        balanced_assets_info.new_unmatched_assets.retain(|_, v| v.amount != Uint128::zero() );
+        input_assets.retain(|_, v| v.amount != Uint128::zero() );
+
+        for (token_name, remain_unit_input_asset) in input_assets.iter() {
+            let mut zero_asset = remain_unit_input_asset.clone();
+            zero_asset.amount = Uint128::zero();
+
+            let unmatched_obj = balanced_assets_info.new_unmatched_assets.entry(token_name.clone()).or_insert(zero_asset);
+            unmatched_obj.amount += remain_unit_input_asset.amount;
+        }
     }
 
     let mut is_unmatched_riskleg = false;
@@ -562,7 +574,7 @@ mod test {
     }
 
     #[test]
-    fn test001_stable_provide_unmatched_stable() {
+    fn test_balancer_001_stable_provide_unmatched_stable() {
         // Provide stableleg
         // Stable asset exists in the unmatched assets
 
@@ -594,7 +606,7 @@ mod test {
     }
 
     #[test]
-    fn test002_stable_provide_unmatched_risk_1() {
+    fn test_balancer_002_stable_provide_unmatched_risk_1() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset > Unmatched assets
@@ -634,7 +646,7 @@ mod test {
     }
 
     #[test]
-    fn test003_stable_provide_unmatched_risk_2() {
+    fn test_balancer_003_stable_provide_unmatched_risk_2() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -677,7 +689,7 @@ mod test {
     }
 
     #[test]
-    fn test004_stable_provide_unmatched_risk_3() {
+    fn test_balancer_004_stable_provide_unmatched_risk_3() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -723,7 +735,7 @@ mod test {
     }
 
     #[test]
-    fn test005_stable_provide_unmatched_risk_3() {
+    fn test_balancer_005_stable_provide_unmatched_risk_3() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset > Unmatched assets
@@ -776,7 +788,7 @@ mod test {
     }
 
     #[test]
-    fn test006_stable_provide_unmatched_risk_5() {
+    fn test_balancer_006_stable_provide_unmatched_risk_5() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -828,7 +840,7 @@ mod test {
     }
 
     #[test]
-    fn test007_stable_provide_unmatched_risk_6() {
+    fn test_balancer_007_stable_provide_unmatched_risk_6() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -883,7 +895,7 @@ mod test {
     }
 
     #[test]
-    fn test008_stable_provide_unmatched_risk_7() {
+    fn test_balancer_008_stable_provide_unmatched_risk_7() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -939,7 +951,7 @@ mod test {
     }
 
     #[test]
-    fn test009_stable_provide_unmatched_risk_7() {
+    fn test_balancer_009_stable_provide_unmatched_risk_7() {
         // Provide stableleg, small
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -995,7 +1007,7 @@ mod test {
     }
 
     #[test]
-    fn test010_risk_provide_risk_unmatched_asset_big_reserve() {
+    fn test_balancer_010_risk_provide_risk_unmatched_asset_big_reserve() {
         // Provide riskleg
         // Riskleg unmatched asset
         // big reserve UST
@@ -1039,7 +1051,7 @@ mod test {
     }
 
     #[test]
-    fn test011_risk_provide_risk_unmatched_asset_small_reserve() {
+    fn test_balancer_011_risk_provide_risk_unmatched_asset_small_reserve() {
         // Provide riskleg
         // Riskleg unmatched asset
         // small reserve UST
@@ -1085,7 +1097,7 @@ mod test {
     }
 
     #[test]
-    fn test012_risk_provide_big_unmatched_stable() {
+    fn test_balancer_012_risk_provide_big_unmatched_stable() {
         // Provide riskleg
         // Stableleg unmatched asset
 
@@ -1123,6 +1135,49 @@ mod test {
         ]);
 
         expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(100000_000000u128));
+
+        _state_print(&after_state, &expected_state);
+        assert_eq!(after_state, expected_state);
+    }
+
+    #[test]
+    fn test_balancer_013_risk_provide_small_unmatched_stable_big_reserve() {
+        // Provide riskleg
+        // Stableleg unmatched asset - small
+        // Big reserve
+
+        let mut before_state = initilaizer();
+
+        let incoming_provide = _asset_generator(LUNA, true, 1, STABLELEG_DENOMINATOR);
+        let unmatched_asset = HashMap::from([
+            (String::from(UUSD), _asset_generator(UUSD, true, 10, STABLELEG_DENOMINATOR)),
+        ]);
+        let reserved_ust = _asset_generator(UUSD, true, 100000, STABLELEG_DENOMINATOR);
+
+        before_state.new_unmatched_assets = unmatched_asset;
+        before_state.new_reserved_asset = reserved_ust;
+
+        let after_state = calculate_balanced_assets(
+            true,
+            incoming_provide,
+            before_state.new_virtual_pairs,
+            before_state.new_unmatched_assets,
+            before_state.new_reserved_asset,
+            before_state.new_used_reserved_asset,
+            before_state.reserve_usage_ratio,
+        ).unwrap();
+
+        let mut expected_state = initilaizer();
+        let luna_pair = expected_state.new_virtual_pairs.get_mut(&String::from(LUNA)).unwrap();
+        *luna_pair = Pairset{
+            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(101_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(10100_000000u128)),
+        };
+
+        expected_state.new_unmatched_assets = HashMap::from([]);
+        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(99910_000000u128));
+        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(90_000000u128));
 
         _state_print(&after_state, &expected_state);
         assert_eq!(after_state, expected_state);
