@@ -91,14 +91,18 @@ pub fn calculate_balanced_assets(
         if (is_stableleg_provide && res.new_unmatched_assets.contains_key(&String::from(UUSD))) || 
             (!is_stableleg_provide && !res.new_unmatched_assets.contains_key(&String::from(UUSD))) {
             
-            res = put_unmatched_asset(vec![temp_input_asset], res);
-            return Ok(res);
+            res = put_unmatched_asset(vec![temp_input_asset.clone()], res);
+
+            if is_stableleg_provide {
+                return Ok(res);
+            }
         }
 
-        let temp_ust_in_hashmap = HashMap::from([
-            (String::from(UUSD), temp_input_asset),
+        let temp_asset_in_hashmap = HashMap::from([
+            (get_asset_name(&temp_input_asset), temp_input_asset),
         ]);
-        res = try_pairing_with_unmatched_assets(temp_ust_in_hashmap, res);
+
+        res = try_pairing_with_unmatched_assets(temp_asset_in_hashmap, res);
         
     } else {
         // withdraw
@@ -1001,11 +1005,63 @@ mod test {
         ).unwrap();
 
         let mut expected_state = initilaizer();
+        let luna_pair = expected_state.new_virtual_pairs.get_mut(&String::from(LUNA)).unwrap();
+        *luna_pair = Pairset{
+            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(110_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(11000_000000u128)),
+        };
+
+        expected_state.new_unmatched_assets = HashMap::from([]);
+
+        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(99000_000000u128));
+        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(1000_000000u128));
+
+        _state_print(&after_state, &expected_state);
+        assert_eq!(after_state, expected_state);
+    }
+
+    #[test]
+    fn test011_risk_provide_risk_unmatched_asset_small_reserve() {
+        // Provide riskleg
+        // Riskleg unmatched asset
+        // small reserve UST
+
+        let mut before_state = initilaizer();
+
+        let incoming_provide = _asset_generator(LUNA, true, 1, STABLELEG_DENOMINATOR);
+        let unmatched_asset = HashMap::from([
+            (String::from(LUNA), _asset_generator(LUNA, true, 9, STABLELEG_DENOMINATOR)),
+        ]);
+        let reserved_ust = _asset_generator(UUSD, true, 1000, STABLELEG_DENOMINATOR);
+
+        before_state.new_unmatched_assets = unmatched_asset;
+        before_state.new_reserved_asset = reserved_ust;
+
+        let after_state = calculate_balanced_assets(
+            true,
+            incoming_provide,
+            before_state.new_virtual_pairs,
+            before_state.new_unmatched_assets,
+            before_state.new_reserved_asset,
+            before_state.new_used_reserved_asset,
+            before_state.reserve_usage_ratio,
+        ).unwrap();
+
+        let mut expected_state = initilaizer();
+        let luna_pair = expected_state.new_virtual_pairs.get_mut(&String::from(LUNA)).unwrap();
+        *luna_pair = Pairset{
+            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(101_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(10100_000000u128)),
+        };
+
         expected_state.new_unmatched_assets = HashMap::from([
-            (String::from(LUNA), _asset_generator(LUNA, true, 10, STABLELEG_DENOMINATOR)),
+            (String::from(LUNA), _asset_generator(LUNA, true, 9, STABLELEG_DENOMINATOR)),
         ]);
 
-        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(100000_000000u128));
+        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(900_000000u128));
+        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(100_000000u128));
 
         _state_print(&after_state, &expected_state);
         assert_eq!(after_state, expected_state);
