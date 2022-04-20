@@ -85,7 +85,8 @@ pub fn calculate_balanced_assets(
         }
 
         // If paid back complete, nothing to do. Done it.
-        if temp_input_asset.amount == Uint128::zero() { return Ok(res); }
+        if temp_input_asset.amount == Uint128::zero() 
+                && res.new_used_reserved_asset.amount == Uint128::zero() { return Ok(res); }
 
         if (is_stableleg_provide && res.new_unmatched_assets.contains_key(&String::from(UUSD))) || 
             (!is_stableleg_provide && !res.new_unmatched_assets.contains_key(&String::from(UUSD))) {
@@ -353,10 +354,10 @@ fn actual_paring(
 
         // Calculate the UST value of the unmatched asset
         let curr_pairset = pairset.get_mut(token_name).unwrap();
-        let ratio = derive_unit_ratio(curr_pairset);
+        let unit_asset_price = derive_unit_ratio(curr_pairset);
         let riskleg_ust_value = unmatched_unit_asset.amount
-                                .checked_mul(ratio).unwrap()
-                                .checked_div( get_pow10(STABLELEG_DENOMINATOR) ).unwrap();
+                                    .checked_mul(unit_asset_price).unwrap()
+                                    .checked_div( get_pow10(curr_pairset.riskleg_denominator) ).unwrap();
 
         if ust_portion > riskleg_ust_value {
             curr_pairset.stableleg.amount += riskleg_ust_value;
@@ -368,7 +369,7 @@ fn actual_paring(
 
             let provided_riskleg_amount = ust_portion
                                             .checked_mul( get_pow10(STABLELEG_DENOMINATOR) ).unwrap()
-                                            .checked_div(ratio).unwrap();
+                                            .checked_div(unit_asset_price).unwrap();
             curr_pairset.riskleg.amount += provided_riskleg_amount;
 
             unmatched_unit_asset.amount -= provided_riskleg_amount;
@@ -396,7 +397,7 @@ fn calculate_weight_unmatched_assets(
 
         let unit_asset_price = derive_unit_ratio(pairset);
         let portion = unit_asset.amount.checked_mul(unit_asset_price).unwrap()
-                                .checked_div(get_pow10(STABLELEG_DENOMINATOR)).unwrap();
+                                .checked_div(get_pow10(pairset.riskleg_denominator)).unwrap();
         whole_portion += portion.clone();
 
         res.insert(token_name.clone(), portion);
@@ -911,6 +912,62 @@ mod test {
 
         expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(99089_989900u128));
         expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(910_010100u128));
+
+        _state_print(&after_state, &expected_state);
+        assert_eq!(after_state, expected_state);
+    }
+
+    #[test]
+    fn test009_stable_provide_unmatched_risk_7() {
+        // Provide stableleg, small
+        // Risk asset exists in the unmatched assets
+        // Provided asset < Unmatched assets
+        // Big reserve
+        // Used reserve exists
+
+        let mut before_state = initilaizer();
+
+        let incoming_provide = _asset_generator(UUSD, true, 100, STABLELEG_DENOMINATOR);
+        let unmatched_asset = HashMap::from([
+            (String::from(LUNA), _asset_generator(LUNA, true, 10, STABLELEG_DENOMINATOR)),
+            (String::from(ANC), _asset_generator(ANC, false, 100, STABLELEG_DENOMINATOR))
+        ]);
+        let reserved_ust = _asset_generator(UUSD, true, 99900, STABLELEG_DENOMINATOR);
+        let used_reserved_ust = _asset_generator(UUSD, true, 900, STABLELEG_DENOMINATOR);
+
+        before_state.new_unmatched_assets = unmatched_asset;
+        before_state.new_reserved_asset = reserved_ust;
+        before_state.new_used_reserved_asset = used_reserved_ust;
+
+        let after_state = calculate_balanced_assets(
+            true,
+            incoming_provide,
+            before_state.new_virtual_pairs,
+            before_state.new_unmatched_assets,
+            before_state.new_reserved_asset,
+            before_state.new_used_reserved_asset,
+            before_state.reserve_usage_ratio,
+        ).unwrap();
+
+        let mut expected_state = initilaizer();
+        let luna_pair = expected_state.new_virtual_pairs.get_mut(&String::from(LUNA)).unwrap();
+        *luna_pair = Pairset{
+            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(110_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(11000_000000u128)),
+        };
+
+        let anc_pair = expected_state.new_virtual_pairs.get_mut(&String::from(ANC)).unwrap();
+        *anc_pair = Pairset{
+            riskleg: _asset_generator_raw(ANC, false, Uint128::from(1100_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(1100_000000u128)),
+        };
+
+        expected_state.new_unmatched_assets = HashMap::from([]);
+
+        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(98899_990000u128));
+        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(1900_010000u128));
 
         _state_print(&after_state, &expected_state);
         assert_eq!(after_state, expected_state);
