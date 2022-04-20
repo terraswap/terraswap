@@ -224,6 +224,7 @@ fn try_pairing_with_unmatched_assets(
     let portions = calculate_weight_unmatched_assets(
         &balanced_assets_info.new_virtual_pairs,
         &balanced_assets_info.new_unmatched_assets,
+        &input_assets,
     ).unwrap();
     
     let mut provided_ust = &mut _asset_generator(UUSD, true, 0, STABLELEG_DENOMINATOR);
@@ -385,14 +386,30 @@ fn actual_paring(
 
 fn calculate_weight_unmatched_assets(
     curr_pairs: &HashMap<String, Pairset>,
-    unmatched_assets: &HashMap<String, Asset>
+    unmatched_assets: &HashMap<String, Asset>,
+    input_asset: &HashMap<String, Asset>, // If input asset is riskleg && stableleg is in unmatched asset
 ) -> StdResult<HashMap<String, Uint128>> {
     let mut res: HashMap<String, Uint128> = HashMap::new();
     let mut whole_portion = Uint128::zero();
 
     for (token_name, unit_asset) in unmatched_assets.iter() {
         // Calculate the UST value of each asset, and summize
-        if *token_name == String::from(UUSD) { continue; }
+        
+        // Only UST is the unmatched asset -> Assign 100%
+        // Incoming asset got 100% portion, and the asset should be a key
+        if *token_name == String::from(UUSD) {
+            let riskleg_token_list: Vec<String> = input_asset.clone().into_keys().collect();
+            if riskleg_token_list.len() == 0 {
+                return Err(StdError::not_found("if unmatched asset is stableleg, incoming asset should exist in this line, and it should be exact one. No asset in here."));
+            } else if riskleg_token_list.len() > 1 {
+                return Err(StdError::not_found(
+                    format!("if unmatched asset is stableleg, incoming asset should exist in this line, and it should be exact one. Too many assets.\nAssets: {:?}", riskleg_token_list)
+                ));
+            }
+
+            res.insert(riskleg_token_list[0].clone(), Uint128::from(1_000000u128));
+            return Ok(res);
+        }
 
         let pairset = match curr_pairs.get(token_name) {
             Some(pairinfo) => pairinfo,
@@ -1062,6 +1079,50 @@ mod test {
 
         expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(900_000000u128));
         expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(100_000000u128));
+
+        _state_print(&after_state, &expected_state);
+        assert_eq!(after_state, expected_state);
+    }
+
+    #[test]
+    fn test012_risk_provide_big_unmatched_stable() {
+        // Provide riskleg
+        // Stableleg unmatched asset
+
+        let mut before_state = initilaizer();
+
+        let incoming_provide = _asset_generator(LUNA, true, 1, STABLELEG_DENOMINATOR);
+        let unmatched_asset = HashMap::from([
+            (String::from(UUSD), _asset_generator(UUSD, true, 1000, STABLELEG_DENOMINATOR)),
+        ]);
+        let reserved_ust = _asset_generator(UUSD, true, 100000, STABLELEG_DENOMINATOR);
+
+        before_state.new_unmatched_assets = unmatched_asset;
+        before_state.new_reserved_asset = reserved_ust;
+
+        let after_state = calculate_balanced_assets(
+            true,
+            incoming_provide,
+            before_state.new_virtual_pairs,
+            before_state.new_unmatched_assets,
+            before_state.new_reserved_asset,
+            before_state.new_used_reserved_asset,
+            before_state.reserve_usage_ratio,
+        ).unwrap();
+
+        let mut expected_state = initilaizer();
+        let luna_pair = expected_state.new_virtual_pairs.get_mut(&String::from(LUNA)).unwrap();
+        *luna_pair = Pairset{
+            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(101_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(10100_000000u128)),
+        };
+
+        expected_state.new_unmatched_assets = HashMap::from([
+            (String::from(UUSD), _asset_generator(UUSD, true, 900, STABLELEG_DENOMINATOR)),
+        ]);
+
+        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(100000_000000u128));
 
         _state_print(&after_state, &expected_state);
         assert_eq!(after_state, expected_state);
