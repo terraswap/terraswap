@@ -606,7 +606,7 @@ mod test {
     }
 
     #[test]
-    fn test_balancer_002_stable_provide_unmatched_risk_1() {
+    fn test_balancer_002_big_stable_provide_unmatched_risk() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset > Unmatched assets
@@ -646,7 +646,7 @@ mod test {
     }
 
     #[test]
-    fn test_balancer_003_stable_provide_unmatched_risk_2() {
+    fn test_balancer_003_small_stable_provide_unmatched_risk_big_reserve() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -689,7 +689,7 @@ mod test {
     }
 
     #[test]
-    fn test_balancer_004_stable_provide_unmatched_risk_3() {
+    fn test_balancer_004_small_stable_provide_unmatched_risk_small_reserve() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -735,7 +735,7 @@ mod test {
     }
 
     #[test]
-    fn test_balancer_005_stable_provide_unmatched_risk_3() {
+    fn test_balancer_005_big_stable_multiple_provide_unmatched_risks() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset > Unmatched assets
@@ -788,7 +788,7 @@ mod test {
     }
 
     #[test]
-    fn test_balancer_006_stable_provide_unmatched_risk_5() {
+    fn test_balancer_006_small_stable_provide_multiple_unmatched_risks_big_reserve() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -840,7 +840,7 @@ mod test {
     }
 
     #[test]
-    fn test_balancer_007_stable_provide_unmatched_risk_6() {
+    fn test_balancer_007_small_stable_provide_multiple_unmatched_risk_small_reserve() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -895,7 +895,7 @@ mod test {
     }
 
     #[test]
-    fn test_balancer_008_stable_provide_unmatched_risk_7() {
+    fn test_balancer_008_small_stable_provide_multiple_unmatched_risks_big_reserve_with_small_used_reserve() {
         // Provide stableleg
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
@@ -951,7 +951,7 @@ mod test {
     }
 
     #[test]
-    fn test_balancer_009_stable_provide_unmatched_risk_7() {
+    fn test_balancer_009_small_stable_provide_multiple_unmatched_risks_big_reserve_with_big_used_reserve() {
         // Provide stableleg, small
         // Risk asset exists in the unmatched assets
         // Provided asset < Unmatched assets
