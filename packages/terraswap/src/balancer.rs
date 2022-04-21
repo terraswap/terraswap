@@ -46,6 +46,7 @@ impl fmt::Display for Pairset {
 }
 
 const STABLELEG_DENOMINATOR: u32 = 6;
+const PORTION_RATE: u32 = 12;
 const UUSD: &str = "uusd";
 
 /// calculate new balanced assets from the existing one & input assets
@@ -145,13 +146,19 @@ pub fn calculate_balanced_assets(
 
                 return Ok(res);
             } else {
-                temp_input_asset.amount -= possible_use_reserve_ust;
-                res.new_used_reserved_asset.amount += possible_use_reserve_ust;
+                // res.new_used_reserved_asset.amount += possible_use_reserve_ust;
 
                 (res.new_virtual_pairs, res.new_unmatched_assets) =
-                        try_withdrawing_with_ust(&temp_input_asset,res.new_virtual_pairs, res.new_unmatched_assets);
+                        try_withdrawing_with_ust(&temp_input_asset, res.new_virtual_pairs, res.new_unmatched_assets);
 
-                res = try_pairing_with_unmatched_assets(res.new_unmatched_assets.clone(), res);
+                // res.new_reserved_asset.amount -= possible_use_reserve_ust;
+                // res.new_used_reserved_asset.amount += possible_use_reserve_ust;
+
+                let possible_use_reserve_ust_hashmap = HashMap::from([
+                    // (String::from(UUSD), _asset_generator_raw(UUSD, true, possible_use_reserve_ust)),
+                ]);
+
+                res = try_pairing_with_unmatched_assets(possible_use_reserve_ust_hashmap, res);
             }
         } else {
             // Risk withdraw -> only one pair withdraw
@@ -331,11 +338,14 @@ fn try_withdrawing_with_ust(
         if *unit_token_name == String::from(UUSD) { continue; }
 
         let unit_withdraw_ust = required_ust.amount
-                                .checked_mul(*portion.get(unit_token_name).unwrap()).unwrap()
-                                .checked_div(get_pow10(STABLELEG_DENOMINATOR)).unwrap();
-        let unit_withdraw_risk = unit_pair.riskleg.amount
-                                .checked_mul(*portion.get(unit_token_name).unwrap()).unwrap()
-                                .checked_div(get_pow10(STABLELEG_DENOMINATOR)).unwrap();
+                                    .checked_mul(*portion.get(unit_token_name).unwrap()).unwrap()
+                                    .checked_div(get_pow10(PORTION_RATE)).unwrap();
+        
+        let unit_withdraw_risk = required_ust.amount // 6
+                                    .checked_mul(*portion.get(unit_token_name).unwrap()).unwrap() // 6 + 12
+                                    .checked_mul(get_pow10(unit_pair.riskleg_denominator)).unwrap() // 6 + 12 + denom
+                                    .checked_div(get_pow10(PORTION_RATE)).unwrap() // 6 + 12 + denom - 12
+                                    .checked_div(derive_unit_ratio(unit_pair)).unwrap(); // 6 + 12 + denom - 12 - 6
 
         unit_pair.stableleg.amount -= unit_withdraw_ust;
         unit_pair.riskleg.amount -= unit_withdraw_risk;
@@ -346,7 +356,7 @@ fn try_withdrawing_with_ust(
         let unit_unmatched_asset_entry = unmatched_asset.entry(unit_token_name.clone()).or_insert(unit_zero_risk);
         unit_unmatched_asset_entry.amount += unit_withdraw_risk;
     }
-    
+
     (pairset, unmatched_asset)
 }
 
@@ -385,7 +395,7 @@ fn actual_paring(
             curr_pairset.stableleg.amount += ust_portion;
 
             let provided_riskleg_amount = ust_portion
-                                            .checked_mul( get_pow10(STABLELEG_DENOMINATOR) ).unwrap()
+                                            .checked_mul( get_pow10(curr_pairset.riskleg_denominator) ).unwrap()
                                             .checked_div(unit_asset_price).unwrap();
             curr_pairset.riskleg.amount += provided_riskleg_amount;
 
@@ -448,21 +458,22 @@ fn calculate_weight_unmatched_assets(
 
 fn calculate_weight_from_whole_pairs(
     curr_pairs: &HashMap<String, Pairset>,
-) -> StdResult<HashMap<String, Uint128>> {
+) -> StdResult<HashMap<String, Uint128>> { // -> denom 12
     let mut res: HashMap<String, Uint128> = HashMap::new();
     let mut whole_portion = Uint128::from(0u128);
 
     for (token_name, unit_pair) in curr_pairs.iter() {
-        let ust_value = unit_pair.stableleg.amount;
+        let ust_value = unit_pair.stableleg.amount
+                            .checked_mul(get_pow10(PORTION_RATE - STABLELEG_DENOMINATOR)).unwrap(); // denom 12
         whole_portion += ust_value;
 
         res.insert(token_name.clone(), ust_value.clone());
     }
     
     for (_, val) in res.iter_mut() {
-        *val = val
-                .checked_mul(get_pow10(STABLELEG_DENOMINATOR)).unwrap()
-                .checked_div(whole_portion).unwrap();
+        *val = val // demon 12
+                .checked_mul(get_pow10(PORTION_RATE)).unwrap() // demon 12
+                .checked_div(whole_portion).unwrap(); // demon 12
     }
 
     Ok(res)
@@ -522,6 +533,7 @@ fn get_pow10(denom: u32) -> Uint128 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::hash::Hash;
 
     const LUNA: &str = "uluna";
     const ANC: &str = "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76";
@@ -602,7 +614,7 @@ mod test {
         expected_state.new_unmatched_assets.insert(String::from(UUSD), _asset_generator(UUSD, true, 200, STABLELEG_DENOMINATOR));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -642,7 +654,7 @@ mod test {
         expected_state.new_unmatched_assets.insert(String::from(UUSD), _asset_generator(UUSD, true, 900, STABLELEG_DENOMINATOR));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -685,7 +697,7 @@ mod test {
         expected_state.new_used_reserved_asset = _asset_generator(UUSD, true, 900, STABLELEG_DENOMINATOR);
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -731,7 +743,7 @@ mod test {
         expected_state.new_used_reserved_asset = _asset_generator(UUSD, true, 10, STABLELEG_DENOMINATOR);
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -777,14 +789,14 @@ mod test {
         };
 
         expected_state.new_unmatched_assets = HashMap::from([
-            (String::from(UUSD), _asset_generator_raw(UUSD, true, Uint128::from(898_999000u128))),
+            (String::from(UUSD), _asset_generator_raw(UUSD, true, Uint128::from(899_000000u128))),
         ]);
 
         expected_state.new_reserved_asset = _asset_generator(UUSD, true, 100, STABLELEG_DENOMINATOR);
         expected_state.new_used_reserved_asset = _asset_generator(UUSD, true, 0, STABLELEG_DENOMINATOR);
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -832,11 +844,11 @@ mod test {
 
         expected_state.new_unmatched_assets = HashMap::from([]);
 
-        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(99089_989900u128));
-        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(910_010100u128));
+        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(99090_000000u128));
+        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(910_000000u128));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -870,28 +882,28 @@ mod test {
         let mut expected_state = initilaizer();
         let luna_pair = expected_state.new_virtual_pairs.get_mut(&String::from(LUNA)).unwrap();
         *luna_pair = Pairset{
-            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(101_089108u128)),
+            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(101_089180u128)),
             riskleg_denominator: 6,
-            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(10108_910890u128)),
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(10108_910800u128)),
         };
 
         let anc_pair = expected_state.new_virtual_pairs.get_mut(&String::from(ANC)).unwrap();
         *anc_pair = Pairset{
-            riskleg: _asset_generator_raw(ANC, false, Uint128::from(1001_089000u128)),
+            riskleg: _asset_generator_raw(ANC, false, Uint128::from(1001_089100u128)),
             riskleg_denominator: 6,
-            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(1001_089000u128)),
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(1001_089100u128)),
         };
 
         expected_state.new_unmatched_assets = HashMap::from([
-            (String::from(LUNA), _asset_generator_raw(LUNA, true, Uint128::from(8_910892u128))),
-            (String::from(ANC), _asset_generator_raw(ANC, false, Uint128::from(8_911000u128))),
+            (String::from(LUNA), _asset_generator_raw(LUNA, true, Uint128::from(8_910820u128))),
+            (String::from(ANC), _asset_generator_raw(ANC, false, Uint128::from(8_910900u128))),
         ]);
 
         expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(90_000000u128));
         expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(10_000000u128));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -943,11 +955,11 @@ mod test {
 
         expected_state.new_unmatched_assets = HashMap::from([]);
 
-        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(99089_989900u128));
-        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(910_010100u128));
+        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(99090_000000u128));
+        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(910_000000u128));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -999,11 +1011,11 @@ mod test {
 
         expected_state.new_unmatched_assets = HashMap::from([]);
 
-        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(98899_990000u128));
-        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(1900_010000u128));
+        expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(98900_000000u128));
+        expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(1900_000000u128));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -1047,7 +1059,7 @@ mod test {
         expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(1000_000000u128));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -1093,7 +1105,7 @@ mod test {
         expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(100_000000u128));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -1137,7 +1149,7 @@ mod test {
         expected_state.new_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(100000_000000u128));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -1180,7 +1192,7 @@ mod test {
         expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(90_000000u128));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -1226,7 +1238,7 @@ mod test {
         expected_state.new_used_reserved_asset = _asset_generator_raw(UUSD, true, Uint128::from(100_000000u128));
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -1264,7 +1276,7 @@ mod test {
         expected_state.new_reserved_asset = _asset_generator(UUSD, true, 100000, STABLELEG_DENOMINATOR);
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -1302,7 +1314,7 @@ mod test {
         expected_state.new_used_reserved_asset = _asset_generator(UUSD, true, 101_110, STABLELEG_DENOMINATOR);
 
         _state_print(&after_state, &expected_state);
-        assert_eq!(after_state, expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
     }
 
     #[test]
@@ -1348,6 +1360,160 @@ mod test {
 
         _state_print(&after_state, &expected_state);
         assert_eq!(after_state, expected_state);
+    }
+
+    #[test]
+    fn test_balancer_018_stable_withdraw_unmatched_big_multiple_stable_asset_small_reserve() {
+        // Withdraw stable
+        // Riskleg in the unmatched asset, multiple
+        // Small reserve UST
+
+        let mut before_state = initilaizer();
+
+        let outgoing_withdraw = _asset_generator(UUSD, true, 101110, STABLELEG_DENOMINATOR);
+        let unmatched_asset = HashMap::from([
+            (String::from(LUNA), _asset_generator(LUNA, true, 1, STABLELEG_DENOMINATOR)),
+            (String::from(BIG), _asset_generator(BIG, true, 1, 9)),
+        ]);
+        let reserved_ust = _asset_generator(UUSD, true, 101310, STABLELEG_DENOMINATOR);
+
+        before_state.new_unmatched_assets = unmatched_asset;
+        before_state.new_reserved_asset = reserved_ust;
+
+        let after_state = calculate_balanced_assets(
+            false,
+            outgoing_withdraw,
+            before_state.new_virtual_pairs,
+            before_state.new_unmatched_assets,
+            before_state.new_reserved_asset,
+            before_state.new_used_reserved_asset,
+            before_state.reserve_usage_ratio,
+        ).unwrap();
+
+        let mut expected_state = initilaizer();
+
+        let luna_pair = expected_state.new_virtual_pairs.get_mut(&String::from(LUNA)).unwrap();
+        *luna_pair = Pairset{
+            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(91_100000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(9110_000000u128)),
+        };
+
+        let anc_pair = expected_state.new_virtual_pairs.get_mut(&String::from(ANC)).unwrap();
+        *anc_pair = Pairset{
+            riskleg: _asset_generator_raw(ANC, true, Uint128::from(910_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(910_000000u128)),
+        };
+
+        let small_pair = expected_state.new_virtual_pairs.get_mut(&String::from(SMALL)).unwrap();
+        *small_pair = Pairset{
+            riskleg: _asset_generator_raw(SMALL, true, Uint128::from(9100_0000u128)), // denom 4
+            riskleg_denominator: 4,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(91_000000u128)),
+        };
+
+        let big_pair = expected_state.new_virtual_pairs.get_mut(&String::from(BIG)).unwrap();
+        *big_pair = Pairset{
+            riskleg: _asset_generator_raw(BIG, true, Uint128::from(9100_100000000u128)), // denom 9
+            riskleg_denominator: 9,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(910010_000000u128)),
+        };
+
+        expected_state.new_unmatched_assets = HashMap::from([
+            (String::from(LUNA), _asset_generator_raw(LUNA, true, Uint128::from(9_900000u128))),
+            (String::from(ANC), _asset_generator_raw(ANC, true, Uint128::from(90_000000u128))),
+            (String::from(SMALL), _asset_generator_raw(SMALL, true, Uint128::from(900_0000u128))), // demon 4
+            (String::from(BIG), _asset_generator_raw(BIG, true, Uint128::from(900_900000000u128))), // denom 9
+        ]);
+
+        expected_state.new_reserved_asset = _asset_generator(UUSD, true, 91179, STABLELEG_DENOMINATOR);
+        expected_state.new_used_reserved_asset = _asset_generator(UUSD, true, 10131, STABLELEG_DENOMINATOR);
+
+        _state_print(&after_state, &expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
+    }
+
+    macro_rules! assert_delta {
+        ($x:expr, $y:expr, $d:expr) => {
+            if (*$x > *$y) {
+                if !(*$x - *$y < $d) { panic!(); }
+            } else if (*$x < *$y){
+                if !(*$y - *$x < $d) { panic!(); }
+            } else {
+                if !(*$y == *$x) { panic!(); }
+            }
+        }
+    }
+
+    fn _assert_eq_for_here(
+        expected: &NewCalculatedBalacedAssets,
+        actual: &NewCalculatedBalacedAssets
+    ) {
+        // pub new_virtual_pairs: HashMap<String, Pairset>,
+        // pub new_unmatched_assets: HashMap<String, Asset>,
+        // pub new_reserved_asset: Asset,
+        // pub new_used_reserved_asset: Asset,
+        // pub reserve_usage_ratio: Uint128, // 10^6 denominator
+
+        _pairset_assert(&expected.new_virtual_pairs, &actual.new_virtual_pairs);
+        _asset_assert(&expected.new_unmatched_assets, &actual.new_unmatched_assets);
+
+        let delta = expected.new_reserved_asset.amount.checked_div(Uint128::from(1000u128)).unwrap();
+        assert_delta!(&expected.new_reserved_asset.amount, &actual.new_reserved_asset.amount, delta);
+
+        let delta = expected.new_used_reserved_asset.amount.checked_div(Uint128::from(1000u128)).unwrap();
+        assert_delta!(&expected.new_used_reserved_asset.amount, &actual.new_used_reserved_asset.amount, delta);
+
+        assert_eq!(expected.reserve_usage_ratio, actual.reserve_usage_ratio);
+    }
+
+    fn _asset_assert<K>(
+        expected: &HashMap<K, Asset>,
+        actual: &HashMap<K, Asset>
+    ) where K: Hash + Eq {
+        if expected.len() != actual.len() {
+            panic!("Different length!");
+        }
+
+        for (unit_k, unit_v) in expected.iter() {
+            let entry = actual.get(unit_k).unwrap();
+            let delta = unit_v.amount.checked_div(Uint128::from(1000u128)).unwrap();
+            assert_delta!(&unit_v.amount, &entry.amount, delta);
+        }
+    }
+
+    fn _pairset_assert<K>(
+        expected: &HashMap<K, Pairset>,
+        actual: &HashMap<K, Pairset>
+    ) where K: Hash + Eq {
+        if expected.len() != actual.len() {
+            panic!("Different length!");
+        }
+
+        for (unit_k, unit_v) in expected.iter() {
+            let entry = actual.get(unit_k).unwrap();
+            _unit_pairset_assert(unit_v, entry);
+        }
+    }
+
+    fn _unit_pairset_assert(
+        expected: &Pairset,
+        actual: &Pairset,
+    ) {
+        // pub stableleg: Asset,
+        // pub riskleg: Asset,
+        // pub riskleg_denominator: u32,
+        
+        assert_eq!(expected.riskleg_denominator, actual.riskleg_denominator);
+        assert_eq!(get_asset_name(&expected.stableleg), get_asset_name(&actual.stableleg));
+        assert_eq!(get_asset_name(&expected.riskleg), get_asset_name(&actual.riskleg));
+
+        let delta = expected.stableleg.amount.checked_div(Uint128::from(1000u128)).unwrap();
+        assert_delta!(&expected.stableleg.amount, &actual.stableleg.amount, delta);
+
+        let delta = expected.riskleg.amount.checked_div(Uint128::from(1000u128)).unwrap();
+        assert_delta!(&expected.riskleg.amount, &actual.riskleg.amount, delta);
     }
 
     fn _state_print(
