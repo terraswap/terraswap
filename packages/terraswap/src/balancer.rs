@@ -1229,6 +1229,44 @@ mod test {
         assert_eq!(after_state, expected_state);
     }
 
+    #[test]
+    fn test_balancer_015_stable_withdraw_unmatched_big_stable_asset() {
+        // Withdraw stableleg
+        // Stablelg in the unmatched asset
+
+        let mut before_state = initilaizer();
+
+        let outgoing_withdraw = _asset_generator(UUSD, true, 100, STABLELEG_DENOMINATOR);
+        let unmatched_asset = HashMap::from([
+            (String::from(UUSD), _asset_generator(UUSD, true, 200, STABLELEG_DENOMINATOR)),
+        ]);
+        let reserved_ust = _asset_generator(UUSD, true, 100000, STABLELEG_DENOMINATOR);
+
+        before_state.new_unmatched_assets = unmatched_asset;
+        before_state.new_reserved_asset = reserved_ust;
+
+        let after_state = calculate_balanced_assets(
+            false,
+            outgoing_withdraw,
+            before_state.new_virtual_pairs,
+            before_state.new_unmatched_assets,
+            before_state.new_reserved_asset,
+            before_state.new_used_reserved_asset,
+            before_state.reserve_usage_ratio,
+        ).unwrap();
+
+        let mut expected_state = initilaizer();
+
+        expected_state.new_unmatched_assets = HashMap::from([
+            (String::from(UUSD), _asset_generator(UUSD, true, 100, STABLELEG_DENOMINATOR)),
+        ]);
+
+        expected_state.new_reserved_asset = _asset_generator(UUSD, true, 100000, STABLELEG_DENOMINATOR);
+
+        _state_print(&after_state, &expected_state);
+        assert_eq!(after_state, expected_state);
+    }
+
     fn _state_print(
         after_state: &NewCalculatedBalacedAssets,
         expected_state: &NewCalculatedBalacedAssets) {
