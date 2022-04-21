@@ -377,7 +377,7 @@ fn actual_paring(
                                 *portions.get(token_name)
                                          .unwrap()
                             ).unwrap()
-                            .checked_div( get_pow10(STABLELEG_DENOMINATOR) ).unwrap();
+                            .checked_div( get_pow10(PORTION_RATE) ).unwrap();
 
         // Calculate the UST value of the unmatched asset
         let curr_pairset = pairset.get_mut(token_name).unwrap();
@@ -429,7 +429,7 @@ fn calculate_weight_unmatched_assets(
                 ));
             }
 
-            res.insert(riskleg_token_list[0].clone(), Uint128::from(1_000000u128));
+            res.insert(riskleg_token_list[0].clone(), Uint128::from(1_000000_000000u128));
             return Ok(res);
         }
 
@@ -438,7 +438,8 @@ fn calculate_weight_unmatched_assets(
             None => return Err(StdError::not_found(format!("no pair info {}", token_name))),
         };
 
-        let unit_asset_price = derive_unit_ratio(pairset);
+        let unit_asset_price = derive_unit_ratio(pairset)
+                                .checked_mul(get_pow10(PORTION_RATE - STABLELEG_DENOMINATOR)).unwrap(); // denom 12
         let portion = unit_asset.amount.checked_mul(unit_asset_price).unwrap()
                                 .checked_div(get_pow10(pairset.riskleg_denominator)).unwrap();
         whole_portion += portion.clone();
@@ -449,7 +450,7 @@ fn calculate_weight_unmatched_assets(
     for (_, val) in res.iter_mut() {
         // Divide by whole portion
         *val = val
-                .checked_mul(get_pow10(STABLELEG_DENOMINATOR)).unwrap()
+                .checked_mul(get_pow10(PORTION_RATE)).unwrap()
                 .checked_div(whole_portion).unwrap();
     }
 
@@ -1363,7 +1364,7 @@ mod test {
     }
 
     #[test]
-    fn test_balancer_018_stable_withdraw_unmatched_big_multiple_stable_asset_small_reserve() {
+    fn test_balancer_018_stable_withdraw_unmatched_big_multiple_risk_asset_small_reserve() {
         // Withdraw stable
         // Riskleg in the unmatched asset, multiple
         // Small reserve UST
@@ -1434,14 +1435,85 @@ mod test {
         _assert_eq_for_here(&after_state, &expected_state);
     }
 
+    #[test]
+    fn test_balancer_019_stable_withdraw_unmatched_big_stable_asset_small_reserve() {
+        // Withdraw stable
+        // Stable in the unmatched asset, Small
+        // Small reserve UST
+
+        let mut before_state = initilaizer();
+
+        let outgoing_withdraw = _asset_generator(UUSD, true, 111110, STABLELEG_DENOMINATOR);
+        let unmatched_asset = HashMap::from([
+            (String::from(UUSD), _asset_generator(UUSD, true, 10000, STABLELEG_DENOMINATOR)),
+        ]);
+        let reserved_ust = _asset_generator(UUSD, true, 101110, STABLELEG_DENOMINATOR);
+
+        before_state.new_unmatched_assets = unmatched_asset;
+        before_state.new_reserved_asset = reserved_ust;
+
+        let after_state = calculate_balanced_assets(
+            false,
+            outgoing_withdraw,
+            before_state.new_virtual_pairs,
+            before_state.new_unmatched_assets,
+            before_state.new_reserved_asset,
+            before_state.new_used_reserved_asset,
+            before_state.reserve_usage_ratio,
+        ).unwrap();
+
+        let mut expected_state = initilaizer();
+
+        let luna_pair = expected_state.new_virtual_pairs.get_mut(&String::from(LUNA)).unwrap();
+        *luna_pair = Pairset{
+            riskleg: _asset_generator_raw(LUNA, true, Uint128::from(91_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(9100_000000u128)),
+        };
+
+        let anc_pair = expected_state.new_virtual_pairs.get_mut(&String::from(ANC)).unwrap();
+        *anc_pair = Pairset{
+            riskleg: _asset_generator_raw(ANC, true, Uint128::from(910_000000u128)),
+            riskleg_denominator: 6,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(910_000000u128)),
+        };
+
+        let small_pair = expected_state.new_virtual_pairs.get_mut(&String::from(SMALL)).unwrap();
+        *small_pair = Pairset{
+            riskleg: _asset_generator_raw(SMALL, true, Uint128::from(9100_0000u128)), // denom 4
+            riskleg_denominator: 4,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(91_000000u128)),
+        };
+
+        let big_pair = expected_state.new_virtual_pairs.get_mut(&String::from(BIG)).unwrap();
+        *big_pair = Pairset{
+            riskleg: _asset_generator_raw(BIG, true, Uint128::from(9100_000000000u128)), // denom 9
+            riskleg_denominator: 9,
+            stableleg: _asset_generator_raw(UUSD, true, Uint128::from(910000_000000u128)),
+        };
+
+        expected_state.new_unmatched_assets = HashMap::from([
+            (String::from(LUNA), _asset_generator_raw(LUNA, true, Uint128::from(9_000000u128))),
+            (String::from(ANC), _asset_generator_raw(ANC, true, Uint128::from(90_000000u128))),
+            (String::from(SMALL), _asset_generator_raw(SMALL, true, Uint128::from(900_0000u128))), // demon 4
+            (String::from(BIG), _asset_generator_raw(BIG, true, Uint128::from(900_000000000u128))), // denom 9
+        ]);
+
+        expected_state.new_reserved_asset = _asset_generator(UUSD, true, 90999, STABLELEG_DENOMINATOR);
+        expected_state.new_used_reserved_asset = _asset_generator(UUSD, true, 10111, STABLELEG_DENOMINATOR);
+
+        _state_print(&after_state, &expected_state);
+        _assert_eq_for_here(&after_state, &expected_state);
+    }
+
     macro_rules! assert_delta {
         ($x:expr, $y:expr, $d:expr) => {
             if (*$x > *$y) {
-                if !(*$x - *$y < $d) { panic!(); }
+                if !(*$x - *$y < $d) { panic!("$x: {}, $y: {}", $x, $y); }
             } else if (*$x < *$y){
-                if !(*$y - *$x < $d) { panic!(); }
+                if !(*$y - *$x < $d) { panic!("$x: {}, $y: {}", $x, $y); }
             } else {
-                if !(*$y == *$x) { panic!(); }
+                if !(*$y == *$x) { panic!("$x: {}, $y: {}", $x, $y); }
             }
         }
     }
