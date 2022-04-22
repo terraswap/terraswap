@@ -1578,18 +1578,13 @@ mod test {
         // pub reserve_usage_ratio: Uint128, // 10^6 denominator
 
         _pairset_assert(&expected.new_virtual_pairs, &actual.new_virtual_pairs);
-        _asset_assert(&expected.new_unmatched_assets, &actual.new_unmatched_assets);
-
-        let delta = expected.new_reserved_asset.amount.checked_div(Uint128::from(1000u128)).unwrap();
-        assert_delta!(&expected.new_reserved_asset.amount, &actual.new_reserved_asset.amount, delta);
-
-        let delta = expected.new_used_reserved_asset.amount.checked_div(Uint128::from(1000u128)).unwrap();
-        assert_delta!(&expected.new_used_reserved_asset.amount, &actual.new_used_reserved_asset.amount, delta);
-
+        _assetmap_assert(&expected.new_unmatched_assets, &actual.new_unmatched_assets);
+        _asset_assert(&expected.new_reserved_asset, &actual.new_reserved_asset);
+        _asset_assert(&expected.new_used_reserved_asset, &actual.new_used_reserved_asset);
         assert_eq!(expected.reserve_usage_ratio, actual.reserve_usage_ratio);
     }
 
-    fn _asset_assert<K>(
+    fn _assetmap_assert<K>(
         expected: &HashMap<K, Asset>,
         actual: &HashMap<K, Asset>
     ) where K: Hash + Eq {
@@ -1599,9 +1594,16 @@ mod test {
 
         for (unit_k, unit_v) in expected.iter() {
             let entry = actual.get(unit_k).unwrap();
-            let delta = unit_v.amount.checked_div(Uint128::from(1000u128)).unwrap();
-            assert_delta!(&unit_v.amount, &entry.amount, delta);
+            _asset_assert(unit_v, entry);
         }
+    }
+
+    fn _asset_assert(
+        expected: &Asset,
+        actual: &Asset
+    ) {
+        let delta = expected.amount.checked_div(Uint128::from(1000u128)).unwrap();
+        assert_delta!(&expected.amount, &actual.amount, delta);
     }
 
     fn _pairset_assert<K>(
@@ -1629,12 +1631,8 @@ mod test {
         assert_eq!(expected.riskleg_denominator, actual.riskleg_denominator);
         assert_eq!(get_asset_name(&expected.stableleg), get_asset_name(&actual.stableleg));
         assert_eq!(get_asset_name(&expected.riskleg), get_asset_name(&actual.riskleg));
-
-        let delta = expected.stableleg.amount.checked_div(Uint128::from(1000u128)).unwrap();
-        assert_delta!(&expected.stableleg.amount, &actual.stableleg.amount, delta);
-
-        let delta = expected.riskleg.amount.checked_div(Uint128::from(1000u128)).unwrap();
-        assert_delta!(&expected.riskleg.amount, &actual.riskleg.amount, delta);
+        _asset_assert(&expected.stableleg, &actual.stableleg);
+        _asset_assert(&expected.riskleg, &actual.riskleg);
     }
 
     fn _state_print(
