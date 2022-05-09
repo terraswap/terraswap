@@ -63,7 +63,7 @@ pub fn instantiate(
                 }),
             })?,
             funds: vec![],
-            label: "".to_string(),
+            label: "lp".to_string(),
         }
         .into(),
         gas_limit: None,

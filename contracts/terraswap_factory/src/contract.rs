@@ -135,7 +135,7 @@ pub fn execute_create_pair(
                 code_id: config.pair_code_id,
                 funds: vec![],
                 admin: None,
-                label: "".to_string(),
+                label: "pair".to_string(),
                 msg: to_binary(&PairInstantiateMsg {
                     asset_infos,
                     token_code_id: config.token_code_id,
