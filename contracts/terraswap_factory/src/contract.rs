@@ -156,7 +156,7 @@ pub fn reply(deps: DepsMut<TerraQueryWrapper>, _env: Env, msg: Reply) -> StdResu
             StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
         })?;
 
-    let pair_contract = res.get_contract_address();
+    let pair_contract = res.get_address();
     let liquidity_token = query_liquidity_token(deps.as_ref(), Addr::unchecked(pair_contract))?;
 
     PAIRS.save(

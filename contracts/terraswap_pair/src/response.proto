@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-// MsgInstantiateContractResponse defines the Msg/InstantiateContract response type.
+// MsgInstantiateContractResponse return instantiation result data
 message MsgInstantiateContractResponse {
-    // ContractAddress is the bech32 address of the new contract instance.
-    string contract_address = 1;
-    // Data contains base64-encoded bytes to returned from the contract
-    bytes data = 2;
-  }
+  // Address is the bech32 address of the new contract instance.
+  string address = 1;
+  // Data contains base64-encoded bytes to returned from the contract
+  bytes data = 2;
+}
