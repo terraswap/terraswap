@@ -166,7 +166,7 @@ pub fn reply(deps: DepsMut<Empty>, _env: Env, msg: Reply) -> StdResult<Response>
             StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
         })?;
 
-    let pair_contract = res.get_contract_address();
+    let pair_contract = res.get_address();
     let liquidity_token = query_liquidity_token(deps.as_ref(), Addr::unchecked(pair_contract))?;
 
     PAIRS.save(
