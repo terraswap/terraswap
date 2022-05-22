@@ -1,13 +1,13 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Coin, CosmosMsg, Decimal, StdError, SubMsg, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, Coin, CosmosMsg, StdError, SubMsg, Uint128, WasmMsg,
 };
 
 use crate::contract::{execute, instantiate, query};
+use crate::operations::asset_into_swap_msg;
 use terraswap::mock_querier::mock_dependencies;
 
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use terra_cosmwasm::{create_swap_msg, create_swap_send_msg};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::router::{
@@ -66,10 +66,6 @@ fn execute_swap_operations() {
 
     let msg = ExecuteMsg::ExecuteSwapOperations {
         operations: vec![
-            SwapOperation::NativeSwap {
-                offer_denom: "uusd".to_string(),
-                ask_denom: "ukrw".to_string(),
-            },
             SwapOperation::TerraSwap {
                 offer_asset_info: AssetInfo::NativeToken {
                     denom: "ukrw".to_string(),
@@ -104,18 +100,6 @@ fn execute_swap_operations() {
     assert_eq!(
         res.messages,
         vec![
-            SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: MOCK_CONTRACT_ADDR.to_string(),
-                funds: vec![],
-                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
-                    operation: SwapOperation::NativeSwap {
-                        offer_denom: "uusd".to_string(),
-                        ask_denom: "ukrw".to_string(),
-                    },
-                    to: None,
-                })
-                .unwrap(),
-            })),
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: MOCK_CONTRACT_ADDR.to_string(),
                 funds: vec![],
@@ -185,10 +169,6 @@ fn execute_swap_operations() {
         amount: Uint128::from(1000000u128),
         msg: to_binary(&Cw20HookMsg::ExecuteSwapOperations {
             operations: vec![
-                SwapOperation::NativeSwap {
-                    offer_denom: "uusd".to_string(),
-                    ask_denom: "ukrw".to_string(),
-                },
                 SwapOperation::TerraSwap {
                     offer_asset_info: AssetInfo::NativeToken {
                         denom: "ukrw".to_string(),
@@ -225,18 +205,6 @@ fn execute_swap_operations() {
     assert_eq!(
         res.messages,
         vec![
-            SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: MOCK_CONTRACT_ADDR.to_string(),
-                funds: vec![],
-                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
-                    operation: SwapOperation::NativeSwap {
-                        offer_denom: "uusd".to_string(),
-                        ask_denom: "ukrw".to_string(),
-                    },
-                    to: None,
-                })
-                .unwrap(),
-            })),
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: MOCK_CONTRACT_ADDR.to_string(),
                 funds: vec![],
@@ -302,24 +270,20 @@ fn execute_swap_operation() {
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     deps.querier.with_terraswap_pairs(&[(
-        &"uusdasset".to_string(),
+        &"uusdasset0000".to_string(),
         &PairInfo {
             asset_infos: [
                 AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-                AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
+                AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
                 },
             ],
             contract_addr: "pair0000".to_string(),
             liquidity_token: "liquidity0000".to_string(),
         },
     )]);
-    deps.querier.with_tax(
-        Decimal::percent(5),
-        &[(&"uusd".to_string(), &Uint128::from(1000000u128))],
-    );
     deps.querier.with_balance(&[(
         &MOCK_CONTRACT_ADDR.to_string(),
         [Coin {
@@ -330,9 +294,13 @@ fn execute_swap_operation() {
     )]);
 
     let msg = ExecuteMsg::ExecuteSwapOperation {
-        operation: SwapOperation::NativeSwap {
-            offer_denom: "uusd".to_string(),
-            ask_denom: "uluna".to_string(),
+        operation: SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            ask_asset_info: AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
         },
         to: None,
     };
@@ -347,21 +315,33 @@ fn execute_swap_operation() {
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(
         res.messages,
-        vec![SubMsg::new(create_swap_msg(
-            Coin {
-                denom: "uusd".to_string(),
-                amount: Uint128::from(1000000u128),
-            },
-            "uluna".to_string()
-        ))],
+        vec![SubMsg::new(
+            asset_into_swap_msg(
+                deps.as_ref(),
+                Addr::unchecked("pair0000"),
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128)
+                },
+                None,
+                None
+            )
+            .unwrap()
+        )],
     );
 
     // optional to address
     // swap_send
     let msg = ExecuteMsg::ExecuteSwapOperation {
-        operation: SwapOperation::NativeSwap {
-            offer_denom: "uusd".to_string(),
-            ask_denom: "uluna".to_string(),
+        operation: SwapOperation::TerraSwap {
+            offer_asset_info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            ask_asset_info: AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
         },
         to: Some("addr0000".to_string()),
     };
@@ -369,14 +349,21 @@ fn execute_swap_operation() {
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(
         res.messages,
-        vec![SubMsg::new(create_swap_send_msg(
-            "addr0000".to_string(),
-            Coin {
-                denom: "uusd".to_string(),
-                amount: Uint128::from(952380u128), // deduct tax
-            },
-            "uluna".to_string()
-        ))],
+        vec![SubMsg::new(
+            asset_into_swap_msg(
+                deps.as_ref(),
+                Addr::unchecked("pair0000"),
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128)
+                },
+                None,
+                Some("addr0000".to_string())
+            )
+            .unwrap()
+        )],
     );
     deps.querier.with_terraswap_pairs(&[(
         &"assetuusd".to_string(),
@@ -451,22 +438,9 @@ fn query_buy_with_routes() {
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    // set tax rate as 5%
-    deps.querier.with_tax(
-        Decimal::percent(5),
-        &[
-            (&"uusd".to_string(), &Uint128::from(1000000u128)),
-            (&"ukrw".to_string(), &Uint128::from(1000000u128)),
-        ],
-    );
-
     let msg = QueryMsg::SimulateSwapOperations {
         offer_amount: Uint128::from(1000000u128),
         operations: vec![
-            SwapOperation::NativeSwap {
-                offer_denom: "uusd".to_string(),
-                ask_denom: "ukrw".to_string(),
-            },
             SwapOperation::TerraSwap {
                 offer_asset_info: AssetInfo::NativeToken {
                     denom: "ukrw".to_string(),
@@ -524,30 +498,7 @@ fn query_buy_with_routes() {
     assert_eq!(
         res,
         SimulateSwapOperationsResponse {
-            amount: Uint128::from(952380u128), // tax charged 1 times uusd => ukrw, ukrw => asset0000, asset0000 => uluna
-        }
-    );
-
-    let msg = QueryMsg::SimulateSwapOperations {
-        offer_amount: Uint128::from(1000000u128),
-        operations: vec![
-            SwapOperation::NativeSwap {
-                offer_denom: "uusd".to_string(),
-                ask_denom: "ukrw".to_string(),
-            },
-            SwapOperation::NativeSwap {
-                offer_denom: "ukrw".to_string(),
-                ask_denom: "uluna".to_string(),
-            },
-        ],
-    };
-
-    let res: SimulateSwapOperationsResponse =
-        from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
-    assert_eq!(
-        res,
-        SimulateSwapOperationsResponse {
-            amount: Uint128::from(952380u128), // tax charged 1 times uusd => ukrw, ukrw => uluna
+            amount: Uint128::from(1000000u128)
         }
     );
 }

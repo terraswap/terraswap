@@ -24,164 +24,6 @@
 // const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_27_1;
 
 #[derive(PartialEq,Clone,Default)]
-pub struct QueryActivesResponse {
-    // message fields
-    pub actives: ::protobuf::RepeatedField<::std::string::String>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a QueryActivesResponse {
-    fn default() -> &'a QueryActivesResponse {
-        <QueryActivesResponse as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl QueryActivesResponse {
-    pub fn new() -> QueryActivesResponse {
-        ::std::default::Default::default()
-    }
-
-    // repeated string actives = 1;
-
-
-    pub fn get_actives(&self) -> &[::std::string::String] {
-        &self.actives
-    }
-    pub fn clear_actives(&mut self) {
-        self.actives.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_actives(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
-        self.actives = v;
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_actives(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
-        &mut self.actives
-    }
-
-    // Take field
-    pub fn take_actives(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
-        ::std::mem::replace(&mut self.actives, ::protobuf::RepeatedField::new())
-    }
-}
-
-impl ::protobuf::Message for QueryActivesResponse {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.actives)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        for value in &self.actives {
-            my_size += ::protobuf::rt::string_size(1, &value);
-        };
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        for v in &self.actives {
-            os.write_string(1, &v)?;
-        };
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> QueryActivesResponse {
-        QueryActivesResponse::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
-        descriptor.get(|| {
-            let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                "actives",
-                |m: &QueryActivesResponse| { &m.actives },
-                |m: &mut QueryActivesResponse| { &mut m.actives },
-            ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<QueryActivesResponse>(
-                "QueryActivesResponse",
-                fields,
-                file_descriptor_proto()
-            )
-        })
-    }
-
-    fn default_instance() -> &'static QueryActivesResponse {
-        static instance: ::protobuf::rt::LazyV2<QueryActivesResponse> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(QueryActivesResponse::new)
-    }
-}
-
-impl ::protobuf::Clear for QueryActivesResponse {
-    fn clear(&mut self) {
-        self.actives.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for QueryActivesResponse {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for QueryActivesResponse {
-    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
-        ::protobuf::reflect::ReflectValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
 pub struct QueryDenomTraceRequest {
     // message fields
     pub hash: ::std::string::String,
@@ -715,47 +557,1152 @@ impl ::protobuf::reflect::ProtobufValue for QueryDenomTraceResponse {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct QueryDenomMetadataRequest {
+    // message fields
+    pub denom: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a QueryDenomMetadataRequest {
+    fn default() -> &'a QueryDenomMetadataRequest {
+        <QueryDenomMetadataRequest as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl QueryDenomMetadataRequest {
+    pub fn new() -> QueryDenomMetadataRequest {
+        ::std::default::Default::default()
+    }
+
+    // string denom = 1;
+
+
+    pub fn get_denom(&self) -> &str {
+        &self.denom
+    }
+    pub fn clear_denom(&mut self) {
+        self.denom.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_denom(&mut self, v: ::std::string::String) {
+        self.denom = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_denom(&mut self) -> &mut ::std::string::String {
+        &mut self.denom
+    }
+
+    // Take field
+    pub fn take_denom(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.denom, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for QueryDenomMetadataRequest {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.denom)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.denom.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.denom);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.denom.is_empty() {
+            os.write_string(1, &self.denom)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> QueryDenomMetadataRequest {
+        QueryDenomMetadataRequest::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "denom",
+                |m: &QueryDenomMetadataRequest| { &m.denom },
+                |m: &mut QueryDenomMetadataRequest| { &mut m.denom },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<QueryDenomMetadataRequest>(
+                "QueryDenomMetadataRequest",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static QueryDenomMetadataRequest {
+        static instance: ::protobuf::rt::LazyV2<QueryDenomMetadataRequest> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(QueryDenomMetadataRequest::new)
+    }
+}
+
+impl ::protobuf::Clear for QueryDenomMetadataRequest {
+    fn clear(&mut self) {
+        self.denom.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for QueryDenomMetadataRequest {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for QueryDenomMetadataRequest {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct QueryDenomMetadataResponse {
+    // message fields
+    pub metadata: ::protobuf::SingularPtrField<Metadata>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a QueryDenomMetadataResponse {
+    fn default() -> &'a QueryDenomMetadataResponse {
+        <QueryDenomMetadataResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl QueryDenomMetadataResponse {
+    pub fn new() -> QueryDenomMetadataResponse {
+        ::std::default::Default::default()
+    }
+
+    // .Metadata metadata = 1;
+
+
+    pub fn get_metadata(&self) -> &Metadata {
+        self.metadata.as_ref().unwrap_or_else(|| <Metadata as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_metadata(&mut self) {
+        self.metadata.clear();
+    }
+
+    pub fn has_metadata(&self) -> bool {
+        self.metadata.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_metadata(&mut self, v: Metadata) {
+        self.metadata = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_metadata(&mut self) -> &mut Metadata {
+        if self.metadata.is_none() {
+            self.metadata.set_default();
+        }
+        self.metadata.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_metadata(&mut self) -> Metadata {
+        self.metadata.take().unwrap_or_else(|| Metadata::new())
+    }
+}
+
+impl ::protobuf::Message for QueryDenomMetadataResponse {
+    fn is_initialized(&self) -> bool {
+        for v in &self.metadata {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.metadata)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if let Some(ref v) = self.metadata.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if let Some(ref v) = self.metadata.as_ref() {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> QueryDenomMetadataResponse {
+        QueryDenomMetadataResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Metadata>>(
+                "metadata",
+                |m: &QueryDenomMetadataResponse| { &m.metadata },
+                |m: &mut QueryDenomMetadataResponse| { &mut m.metadata },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<QueryDenomMetadataResponse>(
+                "QueryDenomMetadataResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static QueryDenomMetadataResponse {
+        static instance: ::protobuf::rt::LazyV2<QueryDenomMetadataResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(QueryDenomMetadataResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for QueryDenomMetadataResponse {
+    fn clear(&mut self) {
+        self.metadata.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for QueryDenomMetadataResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for QueryDenomMetadataResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct DenomUnit {
+    // message fields
+    pub denom: ::std::string::String,
+    pub exponent: u32,
+    pub aliases: ::protobuf::RepeatedField<::std::string::String>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a DenomUnit {
+    fn default() -> &'a DenomUnit {
+        <DenomUnit as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl DenomUnit {
+    pub fn new() -> DenomUnit {
+        ::std::default::Default::default()
+    }
+
+    // string denom = 1;
+
+
+    pub fn get_denom(&self) -> &str {
+        &self.denom
+    }
+    pub fn clear_denom(&mut self) {
+        self.denom.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_denom(&mut self, v: ::std::string::String) {
+        self.denom = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_denom(&mut self) -> &mut ::std::string::String {
+        &mut self.denom
+    }
+
+    // Take field
+    pub fn take_denom(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.denom, ::std::string::String::new())
+    }
+
+    // uint32 exponent = 2;
+
+
+    pub fn get_exponent(&self) -> u32 {
+        self.exponent
+    }
+    pub fn clear_exponent(&mut self) {
+        self.exponent = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_exponent(&mut self, v: u32) {
+        self.exponent = v;
+    }
+
+    // repeated string aliases = 3;
+
+
+    pub fn get_aliases(&self) -> &[::std::string::String] {
+        &self.aliases
+    }
+    pub fn clear_aliases(&mut self) {
+        self.aliases.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_aliases(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
+        self.aliases = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_aliases(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
+        &mut self.aliases
+    }
+
+    // Take field
+    pub fn take_aliases(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
+        ::std::mem::replace(&mut self.aliases, ::protobuf::RepeatedField::new())
+    }
+}
+
+impl ::protobuf::Message for DenomUnit {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.denom)?;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint32()?;
+                    self.exponent = tmp;
+                },
+                3 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.aliases)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.denom.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.denom);
+        }
+        if self.exponent != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.exponent, ::protobuf::wire_format::WireTypeVarint);
+        }
+        for value in &self.aliases {
+            my_size += ::protobuf::rt::string_size(3, &value);
+        };
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.denom.is_empty() {
+            os.write_string(1, &self.denom)?;
+        }
+        if self.exponent != 0 {
+            os.write_uint32(2, self.exponent)?;
+        }
+        for v in &self.aliases {
+            os.write_string(3, &v)?;
+        };
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> DenomUnit {
+        DenomUnit::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "denom",
+                |m: &DenomUnit| { &m.denom },
+                |m: &mut DenomUnit| { &mut m.denom },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
+                "exponent",
+                |m: &DenomUnit| { &m.exponent },
+                |m: &mut DenomUnit| { &mut m.exponent },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "aliases",
+                |m: &DenomUnit| { &m.aliases },
+                |m: &mut DenomUnit| { &mut m.aliases },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<DenomUnit>(
+                "DenomUnit",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static DenomUnit {
+        static instance: ::protobuf::rt::LazyV2<DenomUnit> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(DenomUnit::new)
+    }
+}
+
+impl ::protobuf::Clear for DenomUnit {
+    fn clear(&mut self) {
+        self.denom.clear();
+        self.exponent = 0;
+        self.aliases.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for DenomUnit {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for DenomUnit {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct Metadata {
+    // message fields
+    pub description: ::std::string::String,
+    pub denom_units: ::protobuf::RepeatedField<DenomUnit>,
+    pub base: ::std::string::String,
+    pub display: ::std::string::String,
+    pub name: ::std::string::String,
+    pub symbol: ::std::string::String,
+    pub uri: ::std::string::String,
+    pub uri_hash: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Metadata {
+    fn default() -> &'a Metadata {
+        <Metadata as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Metadata {
+    pub fn new() -> Metadata {
+        ::std::default::Default::default()
+    }
+
+    // string description = 1;
+
+
+    pub fn get_description(&self) -> &str {
+        &self.description
+    }
+    pub fn clear_description(&mut self) {
+        self.description.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_description(&mut self, v: ::std::string::String) {
+        self.description = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_description(&mut self) -> &mut ::std::string::String {
+        &mut self.description
+    }
+
+    // Take field
+    pub fn take_description(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.description, ::std::string::String::new())
+    }
+
+    // repeated .DenomUnit denom_units = 2;
+
+
+    pub fn get_denom_units(&self) -> &[DenomUnit] {
+        &self.denom_units
+    }
+    pub fn clear_denom_units(&mut self) {
+        self.denom_units.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_denom_units(&mut self, v: ::protobuf::RepeatedField<DenomUnit>) {
+        self.denom_units = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_denom_units(&mut self) -> &mut ::protobuf::RepeatedField<DenomUnit> {
+        &mut self.denom_units
+    }
+
+    // Take field
+    pub fn take_denom_units(&mut self) -> ::protobuf::RepeatedField<DenomUnit> {
+        ::std::mem::replace(&mut self.denom_units, ::protobuf::RepeatedField::new())
+    }
+
+    // string base = 3;
+
+
+    pub fn get_base(&self) -> &str {
+        &self.base
+    }
+    pub fn clear_base(&mut self) {
+        self.base.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_base(&mut self, v: ::std::string::String) {
+        self.base = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_base(&mut self) -> &mut ::std::string::String {
+        &mut self.base
+    }
+
+    // Take field
+    pub fn take_base(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.base, ::std::string::String::new())
+    }
+
+    // string display = 4;
+
+
+    pub fn get_display(&self) -> &str {
+        &self.display
+    }
+    pub fn clear_display(&mut self) {
+        self.display.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_display(&mut self, v: ::std::string::String) {
+        self.display = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_display(&mut self) -> &mut ::std::string::String {
+        &mut self.display
+    }
+
+    // Take field
+    pub fn take_display(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.display, ::std::string::String::new())
+    }
+
+    // string name = 5;
+
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+    pub fn clear_name(&mut self) {
+        self.name.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_name(&mut self, v: ::std::string::String) {
+        self.name = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_name(&mut self) -> &mut ::std::string::String {
+        &mut self.name
+    }
+
+    // Take field
+    pub fn take_name(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.name, ::std::string::String::new())
+    }
+
+    // string symbol = 6;
+
+
+    pub fn get_symbol(&self) -> &str {
+        &self.symbol
+    }
+    pub fn clear_symbol(&mut self) {
+        self.symbol.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_symbol(&mut self, v: ::std::string::String) {
+        self.symbol = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_symbol(&mut self) -> &mut ::std::string::String {
+        &mut self.symbol
+    }
+
+    // Take field
+    pub fn take_symbol(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.symbol, ::std::string::String::new())
+    }
+
+    // string uri = 7;
+
+
+    pub fn get_uri(&self) -> &str {
+        &self.uri
+    }
+    pub fn clear_uri(&mut self) {
+        self.uri.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_uri(&mut self, v: ::std::string::String) {
+        self.uri = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_uri(&mut self) -> &mut ::std::string::String {
+        &mut self.uri
+    }
+
+    // Take field
+    pub fn take_uri(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.uri, ::std::string::String::new())
+    }
+
+    // string uri_hash = 8;
+
+
+    pub fn get_uri_hash(&self) -> &str {
+        &self.uri_hash
+    }
+    pub fn clear_uri_hash(&mut self) {
+        self.uri_hash.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_uri_hash(&mut self, v: ::std::string::String) {
+        self.uri_hash = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_uri_hash(&mut self) -> &mut ::std::string::String {
+        &mut self.uri_hash
+    }
+
+    // Take field
+    pub fn take_uri_hash(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.uri_hash, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for Metadata {
+    fn is_initialized(&self) -> bool {
+        for v in &self.denom_units {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.description)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.denom_units)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.base)?;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.display)?;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.name)?;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.symbol)?;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.uri)?;
+                },
+                8 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.uri_hash)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.description.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.description);
+        }
+        for value in &self.denom_units {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        };
+        if !self.base.is_empty() {
+            my_size += ::protobuf::rt::string_size(3, &self.base);
+        }
+        if !self.display.is_empty() {
+            my_size += ::protobuf::rt::string_size(4, &self.display);
+        }
+        if !self.name.is_empty() {
+            my_size += ::protobuf::rt::string_size(5, &self.name);
+        }
+        if !self.symbol.is_empty() {
+            my_size += ::protobuf::rt::string_size(6, &self.symbol);
+        }
+        if !self.uri.is_empty() {
+            my_size += ::protobuf::rt::string_size(7, &self.uri);
+        }
+        if !self.uri_hash.is_empty() {
+            my_size += ::protobuf::rt::string_size(8, &self.uri_hash);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.description.is_empty() {
+            os.write_string(1, &self.description)?;
+        }
+        for v in &self.denom_units {
+            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        };
+        if !self.base.is_empty() {
+            os.write_string(3, &self.base)?;
+        }
+        if !self.display.is_empty() {
+            os.write_string(4, &self.display)?;
+        }
+        if !self.name.is_empty() {
+            os.write_string(5, &self.name)?;
+        }
+        if !self.symbol.is_empty() {
+            os.write_string(6, &self.symbol)?;
+        }
+        if !self.uri.is_empty() {
+            os.write_string(7, &self.uri)?;
+        }
+        if !self.uri_hash.is_empty() {
+            os.write_string(8, &self.uri_hash)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Metadata {
+        Metadata::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "description",
+                |m: &Metadata| { &m.description },
+                |m: &mut Metadata| { &mut m.description },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<DenomUnit>>(
+                "denom_units",
+                |m: &Metadata| { &m.denom_units },
+                |m: &mut Metadata| { &mut m.denom_units },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "base",
+                |m: &Metadata| { &m.base },
+                |m: &mut Metadata| { &mut m.base },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "display",
+                |m: &Metadata| { &m.display },
+                |m: &mut Metadata| { &mut m.display },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "name",
+                |m: &Metadata| { &m.name },
+                |m: &mut Metadata| { &mut m.name },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "symbol",
+                |m: &Metadata| { &m.symbol },
+                |m: &mut Metadata| { &mut m.symbol },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "uri",
+                |m: &Metadata| { &m.uri },
+                |m: &mut Metadata| { &mut m.uri },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "uri_hash",
+                |m: &Metadata| { &m.uri_hash },
+                |m: &mut Metadata| { &mut m.uri_hash },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Metadata>(
+                "Metadata",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Metadata {
+        static instance: ::protobuf::rt::LazyV2<Metadata> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Metadata::new)
+    }
+}
+
+impl ::protobuf::Clear for Metadata {
+    fn clear(&mut self) {
+        self.description.clear();
+        self.denom_units.clear();
+        self.base.clear();
+        self.display.clear();
+        self.name.clear();
+        self.symbol.clear();
+        self.uri.clear();
+        self.uri_hash.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Metadata {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Metadata {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x0bquery.proto\"0\n\x14QueryActivesResponse\x12\x18\n\x07actives\x18\
-    \x01\x20\x03(\tR\x07actives\",\n\x16QueryDenomTraceRequest\x12\x12\n\x04\
-    hash\x18\x01\x20\x01(\tR\x04hash\"?\n\nDenomTrace\x12\x12\n\x04path\x18\
-    \x01\x20\x01(\tR\x04path\x12\x1d\n\nbase_denom\x18\x02\x20\x01(\tR\tbase\
-    Denom\"G\n\x17QueryDenomTraceResponse\x12,\n\x0bdenom_trace\x18\x01\x20\
-    \x01(\x0b2\x0b.DenomTraceR\ndenomTraceJ\xeb\x08\n\x06\x12\x04\0\0\x1f\
-    \x01\n\x08\n\x01\x0c\x12\x03\0\0\x12\nV\n\x02\x04\0\x12\x04\x04\0\x07\
-    \x01\x1aJ\x20QueryActivesResponse\x20is\x20response\x20type\x20for\x20th\
-    e\n\x20Query/Actives\x20RPC\x20method.\n\n\n\n\x03\x04\0\x01\x12\x03\x04\
-    \x08\x1c\n[\n\x04\x04\0\x02\0\x12\x03\x06\x02\x1e\x1aN\x20actives\x20def\
-    ines\x20a\x20list\x20of\x20the\x20denomination\x20which\x20oracle\x20pri\
-    ces\x20aggreed\x20upon.\n\n\x0c\n\x05\x04\0\x02\0\x04\x12\x03\x06\x02\n\
-    \n\x0c\n\x05\x04\0\x02\0\x05\x12\x03\x06\x0b\x11\n\x0c\n\x05\x04\0\x02\0\
-    \x01\x12\x03\x06\x12\x19\n\x0c\n\x05\x04\0\x02\0\x03\x12\x03\x06\x1c\x1d\
-    \n]\n\x02\x04\x01\x12\x04\x0b\0\x0e\x01\x1aQ\x20QueryDenomTraceRequest\
-    \x20is\x20the\x20request\x20type\x20for\x20the\x20Query/DenomTrace\x20RP\
-    C\n\x20method\n\n\n\n\x03\x04\x01\x01\x12\x03\x0b\x08\x1e\nJ\n\x04\x04\
-    \x01\x02\0\x12\x03\r\x02\x12\x1a=\x20hash\x20(in\x20hex\x20format)\x20of\
-    \x20the\x20denomination\x20trace\x20information.\n\n\x0c\n\x05\x04\x01\
-    \x02\0\x05\x12\x03\r\x02\x08\n\x0c\n\x05\x04\x01\x02\0\x01\x12\x03\r\t\r\
-    \n\x0c\n\x05\x04\x01\x02\0\x03\x12\x03\r\x10\x11\n{\n\x02\x04\x02\x12\
-    \x04\x12\0\x18\x01\x1ao\x20DenomTrace\x20contains\x20the\x20base\x20deno\
-    mination\x20for\x20ICS20\x20fungible\x20tokens\x20and\x20the\n\x20source\
-    \x20tracing\x20information\x20path.\n\n\n\n\x03\x04\x02\x01\x12\x03\x12\
-    \x08\x12\nu\n\x04\x04\x02\x02\0\x12\x03\x15\x02\x12\x1ah\x20path\x20defi\
-    nes\x20the\x20chain\x20of\x20port/channel\x20identifiers\x20used\x20for\
-    \x20tracing\x20the\n\x20source\x20of\x20the\x20fungible\x20token.\n\n\
-    \x0c\n\x05\x04\x02\x02\0\x05\x12\x03\x15\x02\x08\n\x0c\n\x05\x04\x02\x02\
-    \0\x01\x12\x03\x15\t\r\n\x0c\n\x05\x04\x02\x02\0\x03\x12\x03\x15\x10\x11\
-    \n?\n\x04\x04\x02\x02\x01\x12\x03\x17\x02\x18\x1a2\x20base\x20denominati\
-    on\x20of\x20the\x20relayed\x20fungible\x20token.\n\n\x0c\n\x05\x04\x02\
-    \x02\x01\x05\x12\x03\x17\x02\x08\n\x0c\n\x05\x04\x02\x02\x01\x01\x12\x03\
-    \x17\t\x13\n\x0c\n\x05\x04\x02\x02\x01\x03\x12\x03\x17\x16\x17\n`\n\x02\
-    \x04\x03\x12\x04\x1c\0\x1f\x01\x1aT\x20QueryDenomTraceResponse\x20is\x20\
-    the\x20response\x20type\x20for\x20the\x20Query/DenomTrace\x20RPC\n\x20me\
-    thod.\n\n\n\n\x03\x04\x03\x01\x12\x03\x1c\x08\x1f\nP\n\x04\x04\x03\x02\0\
-    \x12\x03\x1e\x02\x1d\x1aC\x20denom_trace\x20returns\x20the\x20requested\
-    \x20denomination\x20trace\x20information.\n\n\x0c\n\x05\x04\x03\x02\0\
-    \x06\x12\x03\x1e\x02\x0c\n\x0c\n\x05\x04\x03\x02\0\x01\x12\x03\x1e\r\x18\
-    \n\x0c\n\x05\x04\x03\x02\0\x03\x12\x03\x1e\x1b\x1cb\x06proto3\
+    \n\x0bquery.proto\",\n\x16QueryDenomTraceRequest\x12\x12\n\x04hash\x18\
+    \x01\x20\x01(\tR\x04hash\"?\n\nDenomTrace\x12\x12\n\x04path\x18\x01\x20\
+    \x01(\tR\x04path\x12\x1d\n\nbase_denom\x18\x02\x20\x01(\tR\tbaseDenom\"G\
+    \n\x17QueryDenomTraceResponse\x12,\n\x0bdenom_trace\x18\x01\x20\x01(\x0b\
+    2\x0b.DenomTraceR\ndenomTrace\"1\n\x19QueryDenomMetadataRequest\x12\x14\
+    \n\x05denom\x18\x01\x20\x01(\tR\x05denom\"C\n\x1aQueryDenomMetadataRespo\
+    nse\x12%\n\x08metadata\x18\x01\x20\x01(\x0b2\t.MetadataR\x08metadata\"W\
+    \n\tDenomUnit\x12\x14\n\x05denom\x18\x01\x20\x01(\tR\x05denom\x12\x1a\n\
+    \x08exponent\x18\x02\x20\x01(\rR\x08exponent\x12\x18\n\x07aliases\x18\
+    \x03\x20\x03(\tR\x07aliases\"\xe0\x01\n\x08Metadata\x12\x20\n\x0bdescrip\
+    tion\x18\x01\x20\x01(\tR\x0bdescription\x12+\n\x0bdenom_units\x18\x02\
+    \x20\x03(\x0b2\n.DenomUnitR\ndenomUnits\x12\x12\n\x04base\x18\x03\x20\
+    \x01(\tR\x04base\x12\x18\n\x07display\x18\x04\x20\x01(\tR\x07display\x12\
+    \x12\n\x04name\x18\x05\x20\x01(\tR\x04name\x12\x16\n\x06symbol\x18\x06\
+    \x20\x01(\tR\x06symbol\x12\x10\n\x03uri\x18\x07\x20\x01(\tR\x03uri\x12\
+    \x19\n\x08uri_hash\x18\x08\x20\x01(\tR\x07uriHashJ\xf7\x19\n\x06\x12\x04\
+    \0\0S\x01\n\x08\n\x01\x0c\x12\x03\0\0\x12\n]\n\x02\x04\0\x12\x04\x04\0\
+    \x07\x01\x1aQ\x20QueryDenomTraceRequest\x20is\x20the\x20request\x20type\
+    \x20for\x20the\x20Query/DenomTrace\x20RPC\n\x20method\n\n\n\n\x03\x04\0\
+    \x01\x12\x03\x04\x08\x1e\nJ\n\x04\x04\0\x02\0\x12\x03\x06\x02\x12\x1a=\
+    \x20hash\x20(in\x20hex\x20format)\x20of\x20the\x20denomination\x20trace\
+    \x20information.\n\n\x0c\n\x05\x04\0\x02\0\x05\x12\x03\x06\x02\x08\n\x0c\
+    \n\x05\x04\0\x02\0\x01\x12\x03\x06\t\r\n\x0c\n\x05\x04\0\x02\0\x03\x12\
+    \x03\x06\x10\x11\n{\n\x02\x04\x01\x12\x04\x0b\0\x11\x01\x1ao\x20DenomTra\
+    ce\x20contains\x20the\x20base\x20denomination\x20for\x20ICS20\x20fungibl\
+    e\x20tokens\x20and\x20the\n\x20source\x20tracing\x20information\x20path.\
+    \n\n\n\n\x03\x04\x01\x01\x12\x03\x0b\x08\x12\nu\n\x04\x04\x01\x02\0\x12\
+    \x03\x0e\x02\x12\x1ah\x20path\x20defines\x20the\x20chain\x20of\x20port/c\
+    hannel\x20identifiers\x20used\x20for\x20tracing\x20the\n\x20source\x20of\
+    \x20the\x20fungible\x20token.\n\n\x0c\n\x05\x04\x01\x02\0\x05\x12\x03\
+    \x0e\x02\x08\n\x0c\n\x05\x04\x01\x02\0\x01\x12\x03\x0e\t\r\n\x0c\n\x05\
+    \x04\x01\x02\0\x03\x12\x03\x0e\x10\x11\n?\n\x04\x04\x01\x02\x01\x12\x03\
+    \x10\x02\x18\x1a2\x20base\x20denomination\x20of\x20the\x20relayed\x20fun\
+    gible\x20token.\n\n\x0c\n\x05\x04\x01\x02\x01\x05\x12\x03\x10\x02\x08\n\
+    \x0c\n\x05\x04\x01\x02\x01\x01\x12\x03\x10\t\x13\n\x0c\n\x05\x04\x01\x02\
+    \x01\x03\x12\x03\x10\x16\x17\n`\n\x02\x04\x02\x12\x04\x15\0\x18\x01\x1aT\
+    \x20QueryDenomTraceResponse\x20is\x20the\x20response\x20type\x20for\x20t\
+    he\x20Query/DenomTrace\x20RPC\n\x20method.\n\n\n\n\x03\x04\x02\x01\x12\
+    \x03\x15\x08\x1f\nP\n\x04\x04\x02\x02\0\x12\x03\x17\x02\x1d\x1aC\x20deno\
+    m_trace\x20returns\x20the\x20requested\x20denomination\x20trace\x20infor\
+    mation.\n\n\x0c\n\x05\x04\x02\x02\0\x06\x12\x03\x17\x02\x0c\n\x0c\n\x05\
+    \x04\x02\x02\0\x01\x12\x03\x17\r\x18\n\x0c\n\x05\x04\x02\x02\0\x03\x12\
+    \x03\x17\x1b\x1c\nc\n\x02\x04\x03\x12\x04\x1b\0\x1e\x01\x1aW\x20QueryDen\
+    omMetadataRequest\x20is\x20the\x20request\x20type\x20for\x20the\x20Query\
+    /DenomMetadata\x20RPC\x20method.\n\n\n\n\x03\x04\x03\x01\x12\x03\x1b\x08\
+    !\nA\n\x04\x04\x03\x02\0\x12\x03\x1d\x02\x13\x1a4\x20denom\x20is\x20the\
+    \x20coin\x20denom\x20to\x20query\x20the\x20metadata\x20for.\n\n\x0c\n\
+    \x05\x04\x03\x02\0\x05\x12\x03\x1d\x02\x08\n\x0c\n\x05\x04\x03\x02\0\x01\
+    \x12\x03\x1d\t\x0e\n\x0c\n\x05\x04\x03\x02\0\x03\x12\x03\x1d\x11\x12\nf\
+    \n\x02\x04\x04\x12\x04\"\0%\x01\x1aZ\x20QueryDenomMetadataResponse\x20is\
+    \x20the\x20response\x20type\x20for\x20the\x20Query/DenomMetadata\x20RPC\
+    \n\x20method.\n\n\n\n\x03\x04\x04\x01\x12\x03\"\x08\"\nb\n\x04\x04\x04\
+    \x02\0\x12\x03$\x02\x18\x1aU\x20metadata\x20describes\x20and\x20provides\
+    \x20all\x20the\x20client\x20information\x20for\x20the\x20requested\x20to\
+    ken.\n\n\x0c\n\x05\x04\x04\x02\0\x06\x12\x03$\x02\n\n\x0c\n\x05\x04\x04\
+    \x02\0\x01\x12\x03$\x0b\x13\n\x0c\n\x05\x04\x04\x02\0\x03\x12\x03$\x16\
+    \x17\ni\n\x02\x04\x05\x12\x04)\04\x01\x1a]\x20DenomUnit\x20represents\
+    \x20a\x20struct\x20that\x20describes\x20a\x20given\n\x20denomination\x20\
+    unit\x20of\x20the\x20basic\x20token.\n\n\n\n\x03\x04\x05\x01\x12\x03)\
+    \x08\x11\nT\n\x04\x04\x05\x02\0\x12\x03+\x02\x13\x1aG\x20denom\x20repres\
+    ents\x20the\x20string\x20name\x20of\x20the\x20given\x20denom\x20unit\x20\
+    (e.g\x20uatom).\n\n\x0c\n\x05\x04\x05\x02\0\x05\x12\x03+\x02\x08\n\x0c\n\
+    \x05\x04\x05\x02\0\x01\x12\x03+\t\x0e\n\x0c\n\x05\x04\x05\x02\0\x03\x12\
+    \x03+\x11\x12\n\xa7\x02\n\x04\x04\x05\x02\x01\x12\x031\x02\x16\x1a\x99\
+    \x02\x20exponent\x20represents\x20power\x20of\x2010\x20exponent\x20that\
+    \x20one\x20must\n\x20raise\x20the\x20base_denom\x20to\x20in\x20order\x20\
+    to\x20equal\x20the\x20given\x20DenomUnit's\x20denom\n\x201\x20denom\x20=\
+    \x2010^exponent\x20base_denom\n\x20(e.g.\x20with\x20a\x20base_denom\x20o\
+    f\x20uatom,\x20one\x20can\x20create\x20a\x20DenomUnit\x20of\x20'atom'\
+    \x20with\n\x20exponent\x20=\x206,\x20thus:\x201\x20atom\x20=\x2010^6\x20\
+    uatom).\n\n\x0c\n\x05\x04\x05\x02\x01\x05\x12\x031\x02\x08\n\x0c\n\x05\
+    \x04\x05\x02\x01\x01\x12\x031\t\x11\n\x0c\n\x05\x04\x05\x02\x01\x03\x12\
+    \x031\x14\x15\nF\n\x04\x04\x05\x02\x02\x12\x033\x02\x1e\x1a9\x20aliases\
+    \x20is\x20a\x20list\x20of\x20string\x20aliases\x20for\x20the\x20given\
+    \x20denom\n\n\x0c\n\x05\x04\x05\x02\x02\x04\x12\x033\x02\n\n\x0c\n\x05\
+    \x04\x05\x02\x02\x05\x12\x033\x0b\x11\n\x0c\n\x05\x04\x05\x02\x02\x01\
+    \x12\x033\x12\x19\n\x0c\n\x05\x04\x05\x02\x02\x03\x12\x033\x1c\x1d\nI\n\
+    \x02\x04\x06\x12\x048\0S\x01\x1a=\x20Metadata\x20represents\x20a\x20stru\
+    ct\x20that\x20describes\n\x20a\x20basic\x20token.\n\n\n\n\x03\x04\x06\
+    \x01\x12\x038\x08\x10\n\x0b\n\x04\x04\x06\x02\0\x12\x039\x02\x19\n\x0c\n\
+    \x05\x04\x06\x02\0\x05\x12\x039\x02\x08\n\x0c\n\x05\x04\x06\x02\0\x01\
+    \x12\x039\t\x14\n\x0c\n\x05\x04\x06\x02\0\x03\x12\x039\x17\x18\nN\n\x04\
+    \x04\x06\x02\x01\x12\x03;\x02%\x1aA\x20denom_units\x20represents\x20the\
+    \x20list\x20of\x20DenomUnit's\x20for\x20a\x20given\x20coin\n\n\x0c\n\x05\
+    \x04\x06\x02\x01\x04\x12\x03;\x02\n\n\x0c\n\x05\x04\x06\x02\x01\x06\x12\
+    \x03;\x0b\x14\n\x0c\n\x05\x04\x06\x02\x01\x01\x12\x03;\x15\x20\n\x0c\n\
+    \x05\x04\x06\x02\x01\x03\x12\x03;#$\nZ\n\x04\x04\x06\x02\x02\x12\x03=\
+    \x02\x12\x1aM\x20base\x20represents\x20the\x20base\x20denom\x20(should\
+    \x20be\x20the\x20DenomUnit\x20with\x20exponent\x20=\x200).\n\n\x0c\n\x05\
+    \x04\x06\x02\x02\x05\x12\x03=\x02\x08\n\x0c\n\x05\x04\x06\x02\x02\x01\
+    \x12\x03=\t\r\n\x0c\n\x05\x04\x06\x02\x02\x03\x12\x03=\x10\x11\nZ\n\x04\
+    \x04\x06\x02\x03\x12\x03@\x02\x15\x1aM\x20display\x20indicates\x20the\
+    \x20suggested\x20denom\x20that\x20should\x20be\n\x20displayed\x20in\x20c\
+    lients.\n\n\x0c\n\x05\x04\x06\x02\x03\x05\x12\x03@\x02\x08\n\x0c\n\x05\
+    \x04\x06\x02\x03\x01\x12\x03@\t\x10\n\x0c\n\x05\x04\x06\x02\x03\x03\x12\
+    \x03@\x13\x14\n\\\n\x04\x04\x06\x02\x04\x12\x03D\x02\x12\x1aO\x20name\
+    \x20defines\x20the\x20name\x20of\x20the\x20token\x20(eg:\x20Cosmos\x20At\
+    om)\n\n\x20Since:\x20cosmos-sdk\x200.43\n\n\x0c\n\x05\x04\x06\x02\x04\
+    \x05\x12\x03D\x02\x08\n\x0c\n\x05\x04\x06\x02\x04\x01\x12\x03D\t\r\n\x0c\
+    \n\x05\x04\x06\x02\x04\x03\x12\x03D\x10\x11\n\x90\x01\n\x04\x04\x06\x02\
+    \x05\x12\x03I\x02\x14\x1a\x82\x01\x20symbol\x20is\x20the\x20token\x20sym\
+    bol\x20usually\x20shown\x20on\x20exchanges\x20(eg:\x20ATOM).\x20This\x20\
+    can\n\x20be\x20the\x20same\x20as\x20the\x20display.\n\n\x20Since:\x20cos\
+    mos-sdk\x200.43\n\n\x0c\n\x05\x04\x06\x02\x05\x05\x12\x03I\x02\x08\n\x0c\
+    \n\x05\x04\x06\x02\x05\x01\x12\x03I\t\x0f\n\x0c\n\x05\x04\x06\x02\x05\
+    \x03\x12\x03I\x12\x13\n{\n\x04\x04\x06\x02\x06\x12\x03M\x02\x11\x1an\x20\
+    URI\x20to\x20a\x20document\x20(on\x20or\x20off-chain)\x20that\x20contain\
+    s\x20additional\x20information.\x20Optional.\n\n\x20Since:\x20cosmos-sdk\
+    \x200.46\n\n\x0c\n\x05\x04\x06\x02\x06\x05\x12\x03M\x02\x08\n\x0c\n\x05\
+    \x04\x06\x02\x06\x01\x12\x03M\t\x0c\n\x0c\n\x05\x04\x06\x02\x06\x03\x12\
+    \x03M\x0f\x10\n\x9f\x01\n\x04\x04\x06\x02\x07\x12\x03R\x02\x16\x1a\x91\
+    \x01\x20URIHash\x20is\x20a\x20sha256\x20hash\x20of\x20a\x20document\x20p\
+    ointed\x20by\x20URI.\x20It's\x20used\x20to\x20verify\x20that\n\x20the\
+    \x20document\x20didn't\x20change.\x20Optional.\n\n\x20Since:\x20cosmos-s\
+    dk\x200.46\n\n\x0c\n\x05\x04\x06\x02\x07\x05\x12\x03R\x02\x08\n\x0c\n\
+    \x05\x04\x06\x02\x07\x01\x12\x03R\t\x11\n\x0c\n\x05\x04\x06\x02\x07\x03\
+    \x12\x03R\x14\x15b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

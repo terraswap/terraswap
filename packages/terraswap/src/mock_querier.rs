@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Api, Binary, Coin, ContractResult, Decimal, OwnedDeps,
+    from_binary, from_slice, to_binary, Api, Binary, Coin, ContractResult, Empty, OwnedDeps,
     Querier, QuerierResult, QueryRequest, StdError, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use cosmwasm_storage::to_length_prefixed;
@@ -14,12 +14,10 @@ use std::panic;
 use crate::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw};
 use crate::pair::SimulationResponse;
 use crate::query::{
-    DenomTrace, QueryActivesResponse, QueryDenomTraceRequest, QueryDenomTraceResponse,
+    DenomTrace, Metadata, QueryDenomMetadataRequest, QueryDenomMetadataResponse,
+    QueryDenomTraceRequest, QueryDenomTraceResponse,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
-use terra_cosmwasm::{
-    SwapResponse, TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute,
-};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -32,7 +30,7 @@ pub enum QueryMsg {
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
     contract_balance: &[Coin],
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, TerraQueryWrapper> {
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, Empty> {
     let custom_querier: WasmMockQuerier =
         WasmMockQuerier::new(MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]));
 
@@ -45,11 +43,10 @@ pub fn mock_dependencies(
 }
 
 pub struct WasmMockQuerier {
-    base: MockQuerier<TerraQueryWrapper>,
+    base: MockQuerier<Empty>,
     token_querier: TokenQuerier,
-    tax_querier: TaxQuerier,
     terraswap_factory_querier: TerraswapFactoryQuerier,
-    oracle_querier: OracleQuerier,
+    bank_querier: BankQuerier,
     ibc_querier: IbcQuerier,
 }
 
@@ -83,30 +80,6 @@ pub(crate) fn balances_to_map(
 }
 
 #[derive(Clone, Default)]
-pub struct TaxQuerier {
-    rate: Decimal,
-    // this lets us iterate over all pairs that match the first string
-    caps: HashMap<String, Uint128>,
-}
-
-impl TaxQuerier {
-    pub fn new(rate: Decimal, caps: &[(&String, &Uint128)]) -> Self {
-        TaxQuerier {
-            rate,
-            caps: caps_to_map(caps),
-        }
-    }
-}
-
-pub(crate) fn caps_to_map(caps: &[(&String, &Uint128)]) -> HashMap<String, Uint128> {
-    let mut owner_map: HashMap<String, Uint128> = HashMap::new();
-    for (denom, cap) in caps.iter() {
-        owner_map.insert(denom.to_string(), **cap);
-    }
-    owner_map
-}
-
-#[derive(Clone, Default)]
 pub struct TerraswapFactoryQuerier {
     pairs: HashMap<String, PairInfo>,
 }
@@ -130,7 +103,7 @@ pub(crate) fn pairs_to_map(pairs: &[(&String, &PairInfo)]) -> HashMap<String, Pa
 impl Querier for WasmMockQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         // MockQuerier doesn't support Custom, so we ignore it completely here
-        let request: QueryRequest<TerraQueryWrapper> = match from_slice(bin_request) {
+        let request: QueryRequest<Empty> = match from_slice(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -144,14 +117,14 @@ impl Querier for WasmMockQuerier {
 }
 
 #[derive(Clone, Default)]
-pub struct OracleQuerier {
-    actives: Vec<String>,
+pub struct BankQuerier {
+    denoms: Vec<String>,
 }
 
-impl OracleQuerier {
-    pub fn new(actives: &[String]) -> Self {
-        OracleQuerier {
-            actives: actives.to_vec(),
+impl BankQuerier {
+    pub fn new(denoms: &[String]) -> Self {
+        BankQuerier {
+            denoms: denoms.to_vec(),
         }
     }
 }
@@ -178,41 +151,8 @@ impl IbcQuerier {
 }
 
 impl WasmMockQuerier {
-    pub fn handle_query(&self, request: &QueryRequest<TerraQueryWrapper>) -> QuerierResult {
+    pub fn handle_query(&self, request: &QueryRequest<Empty>) -> QuerierResult {
         match &request {
-            QueryRequest::Custom(TerraQueryWrapper { route, query_data }) => {
-                match (route, query_data) {
-                    (&TerraRoute::Treasury, TerraQuery::TaxRate {}) => {
-                        let res = TaxRateResponse {
-                            rate: self.tax_querier.rate,
-                        };
-                        SystemResult::Ok(ContractResult::Ok(to_binary(&res).unwrap()))
-                    }
-                    (&TerraRoute::Treasury, TerraQuery::TaxCap { denom }) => {
-                        let cap = self
-                            .tax_querier
-                            .caps
-                            .get(denom)
-                            .copied()
-                            .unwrap_or_default();
-                        let res = TaxCapResponse { cap };
-                        SystemResult::Ok(ContractResult::Ok(to_binary(&res).unwrap()))
-                    }
-                    (
-                        &TerraRoute::Market,
-                        TerraQuery::Swap {
-                            offer_coin,
-                            ask_denom: _,
-                        },
-                    ) => {
-                        let res = SwapResponse {
-                            receive: offer_coin.clone(),
-                        };
-                        SystemResult::Ok(ContractResult::from(to_binary(&res)))
-                    }
-                    (_, _) => panic!("DO NOT ENTER HERE"),
-                }
-            }
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => match from_binary(msg) {
                 Ok(QueryMsg::Pair { asset_infos }) => {
                     let key = asset_infos[0].to_string() + asset_infos[1].to_string().as_str();
@@ -335,9 +275,22 @@ impl WasmMockQuerier {
                 }
             }
             QueryRequest::Stargate { path, data } => match path.as_str() {
-                "/terra.oracle.v1beta1.Query/Actives" => {
-                    let mut res: QueryActivesResponse = QueryActivesResponse::new();
-                    res.set_actives(self.oracle_querier.actives.to_vec().into());
+                "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
+                    let req: QueryDenomMetadataRequest = Message::parse_from_bytes(data.as_slice())
+                        .map_err(|_| {
+                            StdError::parse_err("QueryDenomMetadataRequest", "failed to parse data")
+                        })
+                        .unwrap();
+
+                    let mut res: QueryDenomMetadataResponse = QueryDenomMetadataResponse::new();
+                    if self.bank_querier.denoms.contains(&req.denom) {
+                        let mut metadata = Metadata::new();
+                        metadata.set_base(req.denom);
+                        res.set_metadata(metadata);
+                    } else {
+                        return SystemResult::Err(SystemError::Unknown {});
+                    }
+
                     SystemResult::Ok(ContractResult::Ok(Binary::from(
                         res.write_to_bytes().unwrap().to_vec(),
                     )))
@@ -368,13 +321,12 @@ impl WasmMockQuerier {
 }
 
 impl WasmMockQuerier {
-    pub fn new(base: MockQuerier<TerraQueryWrapper>) -> Self {
+    pub fn new(base: MockQuerier<Empty>) -> Self {
         WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),
-            tax_querier: TaxQuerier::default(),
             terraswap_factory_querier: TerraswapFactoryQuerier::default(),
-            oracle_querier: OracleQuerier::default(),
+            bank_querier: BankQuerier::default(),
             ibc_querier: IbcQuerier::default(),
         }
     }
@@ -382,11 +334,6 @@ impl WasmMockQuerier {
     // configure the mint whitelist mock querier
     pub fn with_token_balances(&mut self, balances: &[(&String, &[(&String, &Uint128)])]) {
         self.token_querier = TokenQuerier::new(balances);
-    }
-
-    // configure the token owner mock querier
-    pub fn with_tax(&mut self, rate: Decimal, caps: &[(&String, &Uint128)]) {
-        self.tax_querier = TaxQuerier::new(rate, caps);
     }
 
     // configure the terraswap pair
@@ -400,8 +347,8 @@ impl WasmMockQuerier {
         }
     }
 
-    pub fn with_active_denoms(&mut self, actives: &[String]) {
-        self.oracle_querier = OracleQuerier::new(actives);
+    pub fn with_active_denoms(&mut self, denoms: &[String]) {
+        self.bank_querier = BankQuerier::new(denoms);
     }
 
     pub fn with_ibc_denom_traces(&mut self, denom_traces: &[(&String, (&String, &String))]) {

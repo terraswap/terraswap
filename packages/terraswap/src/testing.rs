@@ -5,7 +5,7 @@ use crate::querier::{
 };
 
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
 #[test]
@@ -169,11 +169,6 @@ fn test_asset() {
         ],
     )]);
 
-    deps.querier.with_tax(
-        Decimal::percent(1),
-        &[(&"uusd".to_string(), &Uint128::from(1000000u128))],
-    );
-
     let token_asset = Asset {
         amount: Uint128::from(123123u128),
         info: AssetInfo::Token {
@@ -189,30 +184,7 @@ fn test_asset() {
     };
 
     assert_eq!(
-        token_asset.compute_tax(&deps.as_ref().querier).unwrap(),
-        Uint128::zero()
-    );
-    assert_eq!(
-        native_token_asset
-            .compute_tax(&deps.as_ref().querier)
-            .unwrap(),
-        Uint128::from(1220u128)
-    );
-
-    assert_eq!(
-        native_token_asset
-            .deduct_tax(&deps.as_ref().querier)
-            .unwrap(),
-        Coin {
-            denom: "uusd".to_string(),
-            amount: Uint128::from(121903u128),
-        }
-    );
-
-    assert_eq!(
-        token_asset
-            .into_msg(&deps.as_ref().querier, Addr::unchecked("addr0000"))
-            .unwrap(),
+        token_asset.into_msg(Addr::unchecked("addr0000")).unwrap(),
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -226,13 +198,13 @@ fn test_asset() {
 
     assert_eq!(
         native_token_asset
-            .into_msg(&deps.as_ref().querier, Addr::unchecked("addr0000"))
+            .into_msg(Addr::unchecked("addr0000"))
             .unwrap(),
         CosmosMsg::Bank(BankMsg::Send {
             to_address: "addr0000".to_string(),
             amount: vec![Coin {
                 denom: "uusd".to_string(),
-                amount: Uint128::from(121903u128),
+                amount: Uint128::from(123123u128),
             }]
         })
     );

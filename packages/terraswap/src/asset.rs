@@ -3,15 +3,14 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use crate::querier::{
-    query_active_denoms, query_balance, query_decimals, query_ibc_denom, query_supply,
+    query_balance, query_decimals, query_denom_info, query_ibc_denom, query_supply,
     query_token_balance,
 };
 use cosmwasm_std::{
-    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, MessageInfo,
+    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Empty, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use terra_cosmwasm::{TerraQuerier, TerraQueryWrapper};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Asset {
@@ -25,53 +24,12 @@ impl fmt::Display for Asset {
     }
 }
 
-static DECIMAL_FRACTION: Uint128 = Uint128::new(1_000_000_000_000_000_000u128);
-
 impl Asset {
     pub fn is_native_token(&self) -> bool {
         self.info.is_native_token()
     }
 
-    pub fn compute_tax(&self, querier: &QuerierWrapper<TerraQueryWrapper>) -> StdResult<Uint128> {
-        let amount = self.amount;
-        if let AssetInfo::NativeToken { denom } = &self.info {
-            if denom == "uluna" {
-                Ok(Uint128::zero())
-            } else {
-                // let terra_querier = QuerierWrapper::<TerraQueryWrapper>::new(&querier);
-                let terra_querier = TerraQuerier::new(querier);
-                let tax_rate: Decimal = (terra_querier.query_tax_rate()?).rate;
-                let tax_cap: Uint128 = (terra_querier.query_tax_cap(denom.to_string())?).cap;
-                Ok(std::cmp::min(
-                    amount.checked_sub(amount.multiply_ratio(
-                        DECIMAL_FRACTION,
-                        DECIMAL_FRACTION * tax_rate + DECIMAL_FRACTION,
-                    ))?,
-                    tax_cap,
-                ))
-            }
-        } else {
-            Ok(Uint128::zero())
-        }
-    }
-
-    pub fn deduct_tax(&self, querier: &QuerierWrapper<TerraQueryWrapper>) -> StdResult<Coin> {
-        let amount = self.amount;
-        if let AssetInfo::NativeToken { denom } = &self.info {
-            Ok(Coin {
-                denom: denom.to_string(),
-                amount: amount.checked_sub(self.compute_tax(querier)?)?,
-            })
-        } else {
-            Err(StdError::generic_err("cannot deduct tax from token asset"))
-        }
-    }
-
-    pub fn into_msg(
-        self,
-        querier: &QuerierWrapper<TerraQueryWrapper>,
-        recipient: Addr,
-    ) -> StdResult<CosmosMsg> {
+    pub fn into_msg(self, recipient: Addr) -> StdResult<CosmosMsg> {
         let amount = self.amount;
 
         match &self.info {
@@ -83,19 +41,18 @@ impl Asset {
                 })?,
                 funds: vec![],
             })),
-            AssetInfo::NativeToken { .. } => Ok(CosmosMsg::Bank(BankMsg::Send {
+            AssetInfo::NativeToken { denom } => Ok(CosmosMsg::Bank(BankMsg::Send {
                 to_address: recipient.to_string(),
-                amount: vec![self.deduct_tax(querier)?],
+                amount: vec![Coin {
+                    amount: self.amount,
+                    denom: denom.to_string(),
+                }],
             })),
         }
     }
 
-    pub fn into_submsg(
-        self,
-        querier: &QuerierWrapper<TerraQueryWrapper>,
-        recipient: Addr,
-    ) -> StdResult<SubMsg> {
-        Ok(SubMsg::new(self.into_msg(querier, recipient)?))
+    pub fn into_submsg(self, recipient: Addr) -> StdResult<SubMsg> {
+        Ok(SubMsg::new(self.into_msg(recipient)?))
     }
 
     pub fn assert_sent_native_token_balance(&self, message_info: &MessageInfo) -> StdResult<()> {
@@ -174,7 +131,7 @@ impl AssetInfo {
     }
     pub fn query_pool(
         &self,
-        querier: &QuerierWrapper<TerraQueryWrapper>,
+        querier: &QuerierWrapper<Empty>,
         api: &dyn Api,
         pool_addr: Addr,
     ) -> StdResult<Uint128> {
@@ -190,7 +147,7 @@ impl AssetInfo {
         }
     }
 
-    pub fn query_decimals(self, querier: &QuerierWrapper<TerraQueryWrapper>) -> StdResult<u8> {
+    pub fn query_decimals(self, querier: &QuerierWrapper<Empty>) -> StdResult<u8> {
         match self {
             AssetInfo::NativeToken { .. } => Ok(6u8),
             AssetInfo::Token { contract_addr } => {
@@ -218,15 +175,13 @@ impl AssetInfo {
         }
     }
 
-    pub fn is_valid(&self, querier: &QuerierWrapper<TerraQueryWrapper>) -> bool {
+    pub fn is_valid(&self, querier: &QuerierWrapper<Empty>) -> bool {
         match self {
             AssetInfo::NativeToken { denom } => {
                 if denom == "uluna" {
                     return true;
                 } else if denom.starts_with('u') {
-                    return query_active_denoms(querier)
-                        .map(|actives| actives.contains(denom))
-                        .unwrap_or(false);
+                    return query_denom_info(querier, denom.to_string()).is_ok();
                 } else if denom.starts_with("ibc") {
                     return query_ibc_denom(querier, denom.to_string()).is_ok();
                 }
@@ -338,7 +293,7 @@ impl PairInfoRaw {
 
     pub fn query_pools(
         &self,
-        querier: &QuerierWrapper<TerraQueryWrapper>,
+        querier: &QuerierWrapper<Empty>,
         api: &dyn Api,
         contract_addr: Addr,
     ) -> StdResult<[Asset; 2]> {
