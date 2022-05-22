@@ -1,10 +1,9 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError,
-    StdResult, SubMsg, WasmMsg,
+    to_binary, Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, ReplyOn, Response,
+    StdError, StdResult, SubMsg, WasmMsg,
 };
-use terra_cosmwasm::TerraQueryWrapper;
 
 use crate::querier::query_liquidity_token;
 use crate::response::MsgInstantiateContractResponse;
@@ -19,7 +18,7 @@ use terraswap::pair::InstantiateMsg as PairInstantiateMsg;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut<TerraQueryWrapper>,
+    deps: DepsMut<Empty>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -37,7 +36,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut<TerraQueryWrapper>,
+    deps: DepsMut<Empty>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -54,7 +53,7 @@ pub fn execute(
 
 // Only owner can execute it
 pub fn execute_update_config(
-    deps: DepsMut<TerraQueryWrapper>,
+    deps: DepsMut<Empty>,
     _env: Env,
     info: MessageInfo,
     owner: Option<String>,
@@ -90,7 +89,7 @@ pub fn execute_update_config(
 
 // Anyone can execute it to create swap pair
 pub fn execute_create_pair(
-    deps: DepsMut<TerraQueryWrapper>,
+    deps: DepsMut<Empty>,
     _env: Env,
     _info: MessageInfo,
     asset_infos: [AssetInfo; 2],
@@ -148,7 +147,7 @@ pub fn execute_create_pair(
 
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut<TerraQueryWrapper>, _env: Env, msg: Reply) -> StdResult<Response> {
+pub fn reply(deps: DepsMut<Empty>, _env: Env, msg: Reply) -> StdResult<Response> {
     let tmp_pair_info = TMP_PAIR_INFO.load(deps.storage)?;
 
     let res: MsgInstantiateContractResponse =
@@ -176,7 +175,7 @@ pub fn reply(deps: DepsMut<TerraQueryWrapper>, _env: Env, msg: Reply) -> StdResu
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps<TerraQueryWrapper>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<Empty>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::Pair { asset_infos } => to_binary(&query_pair(deps, asset_infos)?),
@@ -186,7 +185,7 @@ pub fn query(deps: Deps<TerraQueryWrapper>, _env: Env, msg: QueryMsg) -> StdResu
     }
 }
 
-pub fn query_config(deps: Deps<TerraQueryWrapper>) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps<Empty>) -> StdResult<ConfigResponse> {
     let state: Config = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         owner: deps.api.addr_humanize(&state.owner)?.to_string(),
@@ -197,10 +196,7 @@ pub fn query_config(deps: Deps<TerraQueryWrapper>) -> StdResult<ConfigResponse> 
     Ok(resp)
 }
 
-pub fn query_pair(
-    deps: Deps<TerraQueryWrapper>,
-    asset_infos: [AssetInfo; 2],
-) -> StdResult<PairInfo> {
+pub fn query_pair(deps: Deps<Empty>, asset_infos: [AssetInfo; 2]) -> StdResult<PairInfo> {
     let pair_key = pair_key(&[
         asset_infos[0].to_raw(deps.api)?,
         asset_infos[1].to_raw(deps.api)?,
@@ -210,7 +206,7 @@ pub fn query_pair(
 }
 
 pub fn query_pairs(
-    deps: Deps<TerraQueryWrapper>,
+    deps: Deps<Empty>,
     start_after: Option<[AssetInfo; 2]>,
     limit: Option<u32>,
 ) -> StdResult<PairsResponse> {

@@ -7,8 +7,6 @@ use cw_storage_plus::Item;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub terraswap_factory: CanonicalAddr,
-    pub loop_factory: CanonicalAddr,
-    pub astroport_factory: CanonicalAddr,
 }
 
 // put the length bytes at the first for compatibility with legacy singleton store
@@ -37,8 +35,6 @@ mod test {
             &mut deps.storage,
             &Config {
                 terraswap_factory: deps.api.addr_canonicalize("addr0000").unwrap(),
-                loop_factory: deps.api.addr_canonicalize("addr0001").unwrap(),
-                astroport_factory: deps.api.addr_canonicalize("addr0002").unwrap(),
             },
         )
         .unwrap();
