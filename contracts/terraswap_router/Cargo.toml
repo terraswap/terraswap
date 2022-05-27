@@ -36,13 +36,11 @@ backtraces = ["cosmwasm-std/backtraces"]
 [dependencies]
 cw20 = { version = "0.13.2" } 
 cosmwasm-std = { version = "1.0.0" }
-terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.5.1"}
+terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.6.0"}
 cw-storage-plus = { version = "0.13.2"}
 integer-sqrt = "0.1.5"
 schemars = "0.8.10"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
-cw20-legacy = { version = "0.2.0", features = ["library"]} 
 
 [dev-dependencies]
 cosmwasm-storage = { version = "1.0.0" }

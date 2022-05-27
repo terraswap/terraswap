@@ -8,17 +8,17 @@ phoenix-1 Contract:
 - 
 
 pisco-1 Contract: 
-- https://finder.terra.money/testnet/address/terra1mgrfjp339t4xg4zger3643v88k7p3mppsyj6vny0ua20lx24rpkswxd44a
+- https://finder.terra.money/testnet/address/terra1xp6xe6uwqrspumrkazdg90876ns4h78yw03vfxghhcy03yexcrcsdaqvc8
 
 Tx: 
-- Luna => DELIGHT => DELTEST: https://finder.terra.money/testnet/tx/141F4411A78352C173D27D05A961421C0E0276FB81E232DD8CE20F053AE3B52A
+- Luna => DELIGHT => TNT: https://finder.terra.money/testnet/tx/CCBE3E2C746967A03CAD13B7FCAB4BD823BE54883290F3BEE7A213DC6096A39A
 
 ### Operations Assertion
 The contract will check whether the resulting token is swapped into one token.
 
 ### Example
 
-Swap Luna => DELIGHT => DELTEST
+Swap Luna => DELIGHT => TNT
 ```
 {
    "execute_swap_operations":{
@@ -32,7 +32,7 @@ Swap Luna => DELIGHT => DELTEST
                },
                "ask_asset_info":{
                   "token":{
-                     "contract_addr":"terra1scqz2m7rx87w8m0g9jtj5jyrudduuqyykaecfu5lrd95dy0dt3wscsk4jn"
+                     "contract_addr":"terra1cl0kw9axzpzkw58snj6cy0hfp0xp8xh9tudpw2exvzuupn3fafwqqhjc24"
                   }
                }
             }
@@ -41,12 +41,12 @@ Swap Luna => DELIGHT => DELTEST
             "terra_swap":{
                "offer_asset_info":{
                   "token":{
-                     "contract_addr":"terra1scqz2m7rx87w8m0g9jtj5jyrudduuqyykaecfu5lrd95dy0dt3wscsk4jn"
+                     "contract_addr":"terra1cl0kw9axzpzkw58snj6cy0hfp0xp8xh9tudpw2exvzuupn3fafwqqhjc24"
                   }
                },
                "ask_asset_info":{
                   "token":{
-                     "contract_addr":"terra1pl5xjwmn2wldyntyrpcc0k944esxhw8jlj49dywrt0fqphuypgds699xuu"
+                     "contract_addr":"terra1qnypzwqa03h8vqs0sxjp8hxw0xy5zfwyax26jgnl5k4lw92tjw0scdkrzm"
                   }
                }
             }

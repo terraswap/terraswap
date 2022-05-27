@@ -1,3 +1,13 @@
+# 2.6.0
+
+Terra V2
+
+* [7c34483](https://github.com/terraswap/terraswap/pull/48/commits/7c344838a7fee8d3ff071b45ca5d27a3fe543379) Actual decimals in belief_price
+* [ca549ae](https://github.com/terraswap/terraswap/pull/48/commits/ca549ae2ea36a83e81f5bc151b10ec8e4064be56) Add validation when create_pair
+* [efe2ea0](https://github.com/terraswap/terraswap/pull/48/commits/efe2ea07d6cbcd0cfd34e8954cff24627d7406f2) Support to wasm 1.0.0
+* [68b69cb](https://github.com/terraswap/terraswap/pull/48/commits/68b69cbb239b9e5a250127f562a32ec5bdceff81) Add to decimal in PairInfo
+* [40ae47e](https://github.com/terraswap/terraswap/pull/48/commits/40ae47eed3daa223e06d1f6602fe34d6c23c17e1) Remove native_swap
+
 # 2.5.1
 
 * [2bfb0bb](https://github.com/terraswap/terraswap/pull/20/commits/82954c0aa289f12a3fe66df30cf1a65ce7bd4a4e) LOOP and ASTROPORT support on router
