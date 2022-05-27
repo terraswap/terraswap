@@ -238,9 +238,6 @@ fn simulate_swap_operations(
     let mut offer_amount = offer_amount;
     for operation in operations.into_iter() {
         match operation {
-            SwapOperation::NativeSwap { .. } => {
-                return Err(StdError::generic_err("does not support native_swap"));
-            }
             SwapOperation::TerraSwap {
                 offer_asset_info,
                 ask_asset_info,
@@ -276,9 +273,6 @@ fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
     let mut ask_asset_map: HashMap<String, bool> = HashMap::new();
     for operation in operations.iter() {
         let (offer_asset, ask_asset) = match operation {
-            SwapOperation::NativeSwap { .. } => {
-                return Err(StdError::generic_err("does not support native_swap"))
-            }
             SwapOperation::TerraSwap {
                 offer_asset_info,
                 ask_asset_info,
@@ -324,31 +318,6 @@ fn test_invalid_operations() {
     ])
     .is_ok());
 
-    // include native_swap will error
-    assert!(assert_operations(&[
-        SwapOperation::NativeSwap {
-            offer_denom: "uusd".to_string(),
-            ask_denom: "uluna".to_string(),
-        },
-        SwapOperation::TerraSwap {
-            offer_asset_info: AssetInfo::NativeToken {
-                denom: "ukrw".to_string(),
-            },
-            ask_asset_info: AssetInfo::Token {
-                contract_addr: "asset0001".to_string(),
-            },
-        },
-        SwapOperation::TerraSwap {
-            offer_asset_info: AssetInfo::Token {
-                contract_addr: "asset0001".to_string(),
-            },
-            ask_asset_info: AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-        }
-    ])
-    .is_err());
-
     // asset0002 output
     assert!(assert_operations(&[
         SwapOperation::TerraSwap {
@@ -377,37 +346,4 @@ fn test_invalid_operations() {
         },
     ])
     .is_ok());
-
-    // multiple output token types error
-    assert!(assert_operations(&[
-        SwapOperation::NativeSwap {
-            offer_denom: "uusd".to_string(),
-            ask_denom: "ukrw".to_string(),
-        },
-        SwapOperation::TerraSwap {
-            offer_asset_info: AssetInfo::NativeToken {
-                denom: "ukrw".to_string(),
-            },
-            ask_asset_info: AssetInfo::Token {
-                contract_addr: "asset0001".to_string(),
-            },
-        },
-        SwapOperation::TerraSwap {
-            offer_asset_info: AssetInfo::Token {
-                contract_addr: "asset0001".to_string(),
-            },
-            ask_asset_info: AssetInfo::NativeToken {
-                denom: "uaud".to_string(),
-            },
-        },
-        SwapOperation::TerraSwap {
-            offer_asset_info: AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            ask_asset_info: AssetInfo::Token {
-                contract_addr: "asset0002".to_string(),
-            },
-        },
-    ])
-    .is_err());
 }

@@ -25,9 +25,6 @@ pub fn execute_swap_operation(
     }
 
     let messages: Vec<CosmosMsg> = match operation {
-        SwapOperation::NativeSwap { .. } => {
-            return Err(StdError::generic_err("does not support native_swap"));
-        }
         SwapOperation::TerraSwap {
             offer_asset_info,
             ask_asset_info,
