@@ -20,17 +20,19 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     // check valid token info
     msg.validate()?;
 
     // create initial accounts
-    let total_supply = create_accounts(&mut deps, msg.initial_balances.as_slice()).unwrap();
+    let total_supply = create_accounts(&mut deps, &msg.initial_balances)?;
 
     if let Some(limit) = msg.get_cap() {
         if total_supply > limit {
-            return Err(StdError::generic_err("Initial supply greater than cap"));
+            return Err(ContractError::Std(StdError::generic_err(
+                "Initial supply greater than cap",
+            )));
         }
     }
 
