@@ -1,51 +1,58 @@
 # Terraswap Router <!-- omit in toc -->
 
-The Router Contract contains the logic to facilitate multi-hop swap operations via native & terraswap.
+The Router Contract contains the logic to facilitate multi-hop swap operations via terraswap.
 
-**On-chain swap & Terraswap is supported.**
+**Only Terraswap is supported.**
 
-Columbus-4 Contract:
-- https://finder.terra.money/columbus-4/address/terra19qx5xe6q9ll4w0890ux7lv2p4mf3csd4qvt3ex
+phoenix-1 Contract:
+- 
 
-Tequila-0004 Contract: 
-- https://finder.terra.money/tequila-0004/address/terra14z80rwpd0alzj4xdtgqdmcqt9wd9xj5ffd60wp
+pisco-1 Contract: 
+- https://finder.terra.money/testnet/address/terra1mgrfjp339t4xg4zger3643v88k7p3mppsyj6vny0ua20lx24rpkswxd44a
 
 Tx: 
-- KRT => UST => mABNB: https://finder.terra.money/tequila-0004/tx/46A1C956D2F4F7A1FA22A8F93749AEADB953ACDFC1B9FB7661EEAB5C59188175
-- mABNB => UST => KRT:  https://finder.terra.money/tequila-0004/tx/E9D63CE2C8AC38F6C9434C62F9A8B59F38259FEB86F075D43C253EA485D7F0A9
+- Luna => DELIGHT => DELTEST: https://finder.terra.money/testnet/tx/141F4411A78352C173D27D05A961421C0E0276FB81E232DD8CE20F053AE3B52A
 
 ### Operations Assertion
 The contract will check whether the resulting token is swapped into one token.
 
 ### Example
 
-Swap KRT => UST => mABNB
+Swap Luna => DELIGHT => DELTEST
 ```
 {
    "execute_swap_operations":{
       "operations":[
          {
-            "native_swap":{
-               "offer_denom":"ukrw",
-               "ask_denom":"uusd"
+            "terra_swap":{
+               "offer_asset_info":{
+                  "native_token":{
+                     "denom":"uluna"
+                  }
+               },
+               "ask_asset_info":{
+                  "token":{
+                     "contract_addr":"terra1scqz2m7rx87w8m0g9jtj5jyrudduuqyykaecfu5lrd95dy0dt3wscsk4jn"
+                  }
+               }
             }
          },
          {
             "terra_swap":{
                "offer_asset_info":{
-                  "native_token":{
-                     "denom":"uusd"
+                  "token":{
+                     "contract_addr":"terra1scqz2m7rx87w8m0g9jtj5jyrudduuqyykaecfu5lrd95dy0dt3wscsk4jn"
                   }
                },
                "ask_asset_info":{
                   "token":{
-                     "contract_addr":"terra1avryzxnsn2denq7p2d7ukm6nkck9s0rz2llgnc"
+                     "contract_addr":"terra1pl5xjwmn2wldyntyrpcc0k944esxhw8jlj49dywrt0fqphuypgds699xuu"
                   }
                }
             }
          }
       ],
-      "minimum_receive":"88000"
+      "minimum_receive":"1"
    }
 }
 ```
