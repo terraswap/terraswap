@@ -1,9 +1,8 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Api, Binary, Coin, ContractResult, Empty, OwnedDeps,
-    Querier, QuerierResult, QueryRequest, StdError, SystemError, SystemResult, Uint128, WasmQuery,
+    Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
-use protobuf::Message;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,10 +11,6 @@ use std::panic;
 
 use crate::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw};
 use crate::pair::{ReverseSimulationResponse, SimulationResponse};
-use crate::query::{
-    DenomTrace, Metadata, QueryDenomMetadataRequest, QueryDenomMetadataResponse,
-    QueryDenomTraceRequest, QueryDenomTraceResponse,
-};
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -48,8 +43,6 @@ pub struct WasmMockQuerier {
     base: MockQuerier<Empty>,
     token_querier: TokenQuerier,
     terraswap_factory_querier: TerraswapFactoryQuerier,
-    bank_querier: BankQuerier,
-    ibc_querier: IbcQuerier,
 }
 
 #[derive(Clone, Default)]
@@ -117,40 +110,6 @@ impl Querier for WasmMockQuerier {
             }
         };
         self.handle_query(&request)
-    }
-}
-
-#[derive(Clone, Default)]
-pub struct BankQuerier {
-    denoms: Vec<String>,
-}
-
-impl BankQuerier {
-    pub fn new(denoms: &[String]) -> Self {
-        BankQuerier {
-            denoms: denoms.to_vec(),
-        }
-    }
-}
-
-#[derive(Clone, Default)]
-pub struct IbcQuerier {
-    denom_traces: HashMap<String, DenomTrace>,
-}
-
-impl IbcQuerier {
-    pub fn new(denom_traces: &[(&String, (&String, &String))]) -> Self {
-        let mut denom_traces_map: HashMap<String, DenomTrace> = HashMap::new();
-        for (hash, denom_trace) in denom_traces.iter() {
-            let mut proto_denom_trace = DenomTrace::new();
-            proto_denom_trace.set_path(denom_trace.0.to_string());
-            proto_denom_trace.set_base_denom(denom_trace.1.to_string());
-
-            denom_traces_map.insert(hash.to_string(), proto_denom_trace);
-        }
-        IbcQuerier {
-            denom_traces: denom_traces_map,
-        }
     }
 }
 
@@ -286,52 +245,12 @@ impl WasmMockQuerier {
                                 denom: "uusd".to_string(),
                             },
                         ],
+                        asset_decimals: [6u8, 6u8],
                     })))
                 } else {
                     panic!("DO NOT ENTER HERE")
                 }
             }
-            QueryRequest::Stargate { path, data } => match path.as_str() {
-                "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
-                    let req: QueryDenomMetadataRequest = Message::parse_from_bytes(data.as_slice())
-                        .map_err(|_| {
-                            StdError::parse_err("QueryDenomMetadataRequest", "failed to parse data")
-                        })
-                        .unwrap();
-
-                    let mut res: QueryDenomMetadataResponse = QueryDenomMetadataResponse::new();
-                    if self.bank_querier.denoms.contains(&req.denom) {
-                        let mut metadata = Metadata::new();
-                        metadata.set_base(req.denom);
-                        res.set_metadata(metadata);
-                    } else {
-                        return SystemResult::Err(SystemError::Unknown {});
-                    }
-
-                    SystemResult::Ok(ContractResult::Ok(Binary::from(
-                        res.write_to_bytes().unwrap().to_vec(),
-                    )))
-                }
-                "/ibc.applications.transfer.v1.Query/DenomTrace" => {
-                    let req: QueryDenomTraceRequest = Message::parse_from_bytes(data.as_slice())
-                        .map_err(|_| {
-                            StdError::parse_err("QueryDenomTraceRequest", "failed to parse data")
-                        })
-                        .unwrap();
-                    let denom_trace = self.ibc_querier.denom_traces.get(&req.hash).unwrap();
-                    let mut proto_denom_trace = DenomTrace::new();
-                    proto_denom_trace.set_path(denom_trace.path.to_string());
-                    proto_denom_trace.set_base_denom(denom_trace.base_denom.to_string());
-
-                    let mut res = QueryDenomTraceResponse::new();
-                    res.set_denom_trace(proto_denom_trace);
-
-                    SystemResult::Ok(ContractResult::Ok(Binary::from(
-                        res.write_to_bytes().unwrap(),
-                    )))
-                }
-                _ => panic!(""),
-            },
             _ => self.base.handle_query(request),
         }
     }
@@ -343,8 +262,6 @@ impl WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),
             terraswap_factory_querier: TerraswapFactoryQuerier::default(),
-            bank_querier: BankQuerier::default(),
-            ibc_querier: IbcQuerier::default(),
         }
     }
 
@@ -362,13 +279,5 @@ impl WasmMockQuerier {
         for (addr, balance) in balances {
             self.base.update_balance(addr.to_string(), balance.clone());
         }
-    }
-
-    pub fn with_active_denoms(&mut self, denoms: &[String]) {
-        self.bank_querier = BankQuerier::new(denoms);
-    }
-
-    pub fn with_ibc_denom_traces(&mut self, denom_traces: &[(&String, (&String, &String))]) {
-        self.ibc_querier = IbcQuerier::new(denom_traces);
     }
 }

@@ -3,9 +3,11 @@ use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
 
 use crate::state::{pair_key, TmpPairInfo, TMP_PAIR_INFO};
 
-use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockStorage};
+use cosmwasm_std::testing::{
+    mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
+};
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Empty, OwnedDeps, Reply, ReplyOn, StdError, SubMsg,
+    attr, coin, from_binary, to_binary, Empty, OwnedDeps, Reply, ReplyOn, StdError, SubMsg,
     SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use terraswap::asset::{AssetInfo, PairInfo};
@@ -111,16 +113,10 @@ fn init(
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
 
-    deps.querier.with_active_denoms(&["uusd".to_string()]);
     deps.querier.with_token_balances(&[(
         &"asset0001".to_string(),
         &[(&"addr0000".to_string(), &Uint128::zero())],
     )]);
-    deps.querier.with_ibc_denom_traces(&[(
-        &"HASH".to_string(),
-        (&"channel".to_string(), &"denom".to_string()),
-    )]);
-
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
 
@@ -129,7 +125,7 @@ fn init(
 
 #[test]
 fn create_pair() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
 
     let asset_infos = [
@@ -165,12 +161,13 @@ fn create_pair() {
                 msg: to_binary(&PairInstantiateMsg {
                     asset_infos: asset_infos.clone(),
                     token_code_id: 123u64,
+                    asset_decimals: [6u8, 8u8]
                 })
                 .unwrap(),
                 code_id: 321u64,
                 funds: vec![],
                 label: "pair".to_string(),
-                admin: None,
+                admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
             .into()
         },]
@@ -186,13 +183,17 @@ fn create_pair() {
         TmpPairInfo {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
+            asset_decimals: [6u8, 8u8]
         }
     );
 }
 
 #[test]
 fn create_pair_native_token_and_ibc_token() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies(&[
+        coin(10u128, "uusd".to_string()),
+        coin(10u128, "ibc/HASH".to_string()),
+    ]);
     deps = init(deps);
 
     let asset_infos = [
@@ -225,12 +226,13 @@ fn create_pair_native_token_and_ibc_token() {
                 msg: to_binary(&PairInstantiateMsg {
                     asset_infos: asset_infos.clone(),
                     token_code_id: 123u64,
+                    asset_decimals: [6u8, 6u8]
                 })
                 .unwrap(),
                 code_id: 321u64,
                 funds: vec![],
                 label: "pair".to_string(),
-                admin: None,
+                admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
             .into()
         },]
@@ -246,13 +248,14 @@ fn create_pair_native_token_and_ibc_token() {
         TmpPairInfo {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
+            asset_decimals: [6u8, 6u8]
         }
     );
 }
 
 #[test]
 fn fail_to_create_same_pair() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
 
     let asset_infos = [
@@ -272,9 +275,8 @@ fn fail_to_create_same_pair() {
 }
 
 #[test]
-#[should_panic]
 fn fail_to_create_pair_with_unactive_denoms() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
 
     let asset_infos = [
@@ -290,12 +292,12 @@ fn fail_to_create_pair_with_unactive_denoms() {
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
-    execute(deps.as_mut(), env, info, msg).unwrap();
+    execute(deps.as_mut(), env, info, msg).unwrap_err();
 }
 
 #[test]
 fn fail_to_create_pair_with_invalid_denom() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies(&[coin(10u128, "uluna".to_string())]);
     deps = init(deps);
 
     let asset_infos = [
@@ -316,7 +318,7 @@ fn fail_to_create_pair_with_invalid_denom() {
 
 #[test]
 fn fail_to_create_pair_with_unknown_token() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
 
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
@@ -325,8 +327,6 @@ fn fail_to_create_pair_with_unknown_token() {
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
-
-    deps.querier.with_active_denoms(&["uusd".to_string()]);
 
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
@@ -348,9 +348,8 @@ fn fail_to_create_pair_with_unknown_token() {
 }
 
 #[test]
-#[should_panic]
 fn fail_to_create_pair_with_unknown_ibc_token() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies_with_balance(&[coin(10u128, "uusd".to_string())]);
 
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
@@ -359,8 +358,6 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
-
-    deps.querier.with_active_denoms(&["uusd".to_string()]);
 
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
@@ -385,6 +382,14 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
 fn reply_test() {
     let mut deps = mock_dependencies(&[]);
 
+    deps.querier.with_token_balances(&[(
+        &MOCK_CONTRACT_ADDR.to_string(),
+        &[
+            (&"asset0000".to_string(), &Uint128::from(100u128)),
+            (&"asset0001".to_string(), &Uint128::from(100u128)),
+        ],
+    )]);
+
     let asset_infos = [
         AssetInfo::Token {
             contract_addr: "asset0000".to_string(),
@@ -406,6 +411,7 @@ fn reply_test() {
             &TmpPairInfo {
                 asset_infos: raw_infos,
                 pair_key,
+                asset_decimals: [8u8, 8u8],
             },
         )
         .unwrap();
@@ -432,6 +438,7 @@ fn reply_test() {
             ],
             contract_addr: "0000".to_string(),
             liquidity_token: "liquidity0000".to_string(),
+            asset_decimals: [8u8, 8u8],
         },
     )]);
 
@@ -453,6 +460,7 @@ fn reply_test() {
             liquidity_token: "liquidity0000".to_string(),
             contract_addr: "0000".to_string(),
             asset_infos,
+            asset_decimals: [8u8, 8u8]
         }
     );
 }

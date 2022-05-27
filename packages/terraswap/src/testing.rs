@@ -1,7 +1,7 @@
 use crate::asset::{Asset, AssetInfo, PairInfo};
 use crate::mock_querier::mock_dependencies;
 use crate::querier::{
-    query_all_balances, query_balance, query_pair_info, query_supply, query_token_balance,
+    query_all_balances, query_balance, query_pair_info, query_token_balance, query_token_info,
 };
 
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
@@ -89,7 +89,9 @@ fn supply_querier() {
     )]);
 
     assert_eq!(
-        query_supply(&deps.as_ref().querier, Addr::unchecked("liquidity0000")).unwrap(),
+        query_token_info(&deps.as_ref().querier, Addr::unchecked("liquidity0000"))
+            .unwrap()
+            .total_supply,
         Uint128::from(492u128)
     )
 }
@@ -227,6 +229,7 @@ fn query_terraswap_pair_contract() {
             ],
             contract_addr: "pair0000".to_string(),
             liquidity_token: "liquidity0000".to_string(),
+            asset_decimals: [6u8, 6u8],
         },
     )]);
 
