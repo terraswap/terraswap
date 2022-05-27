@@ -12,6 +12,7 @@ pub struct InstantiateMsg {
     pub asset_infos: [AssetInfo; 2],
     /// Token contract code id for initialization
     pub token_code_id: u64,
+    pub asset_decimals: [u8; 2],
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

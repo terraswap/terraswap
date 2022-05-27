@@ -32,6 +32,7 @@ fn proper_initialization() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -122,6 +123,7 @@ fn provide_liquidity() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -528,6 +530,7 @@ fn withdraw_liquidity() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -644,6 +647,7 @@ fn try_native_to_token() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -817,6 +821,7 @@ fn try_token_to_native() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [8u8, 8u8],
     };
 
     let env = mock_env();
@@ -990,7 +995,6 @@ fn try_token_to_native() {
 
 #[test]
 fn test_max_spread() {
-    let deps = mock_dependencies(&[]);
     let offer_asset_info = AssetInfo::NativeToken {
         denom: "offer_asset".to_string(),
     };
@@ -999,7 +1003,6 @@ fn test_max_spread() {
     };
 
     assert_max_spread(
-        deps.as_ref(),
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
         Asset {
@@ -1011,11 +1014,12 @@ fn test_max_spread() {
             amount: Uint128::from(989999u128),
         },
         Uint128::zero(),
+        6u8,
+        6u8,
     )
     .unwrap_err();
 
     assert_max_spread(
-        deps.as_ref(),
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
         Asset {
@@ -1027,11 +1031,12 @@ fn test_max_spread() {
             amount: Uint128::from(990000u128),
         },
         Uint128::zero(),
+        6u8,
+        6u8,
     )
     .unwrap();
 
     assert_max_spread(
-        deps.as_ref(),
         None,
         Some(Decimal::percent(1)),
         Asset {
@@ -1043,11 +1048,12 @@ fn test_max_spread() {
             amount: Uint128::from(989999u128),
         },
         Uint128::from(10001u128),
+        6u8,
+        6u8,
     )
     .unwrap_err();
 
     assert_max_spread(
-        deps.as_ref(),
         None,
         Some(Decimal::percent(1)),
         Asset {
@@ -1059,6 +1065,8 @@ fn test_max_spread() {
             amount: Uint128::from(990000u128),
         },
         Uint128::from(10000u128),
+        6u8,
+        6u8,
     )
     .unwrap();
 }
@@ -1083,7 +1091,6 @@ fn test_max_spread_with_diff_decimal() {
     };
 
     assert_max_spread(
-        deps.as_ref(),
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
         Asset {
@@ -1095,11 +1102,12 @@ fn test_max_spread_with_diff_decimal() {
             amount: Uint128::from(100000000u128),
         },
         Uint128::zero(),
+        6u8,
+        8u8,
     )
     .unwrap();
 
     assert_max_spread(
-        deps.as_ref(),
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
         Asset {
@@ -1111,6 +1119,8 @@ fn test_max_spread_with_diff_decimal() {
             amount: Uint128::from(98999999u128),
         },
         Uint128::zero(),
+        6u8,
+        8u8,
     )
     .unwrap_err();
 
@@ -1122,7 +1132,6 @@ fn test_max_spread_with_diff_decimal() {
     };
 
     assert_max_spread(
-        deps.as_ref(),
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
         Asset {
@@ -1134,11 +1143,12 @@ fn test_max_spread_with_diff_decimal() {
             amount: Uint128::from(1000000u128),
         },
         Uint128::zero(),
+        8u8,
+        6u8,
     )
     .unwrap();
 
     assert_max_spread(
-        deps.as_ref(),
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
         Asset {
@@ -1150,6 +1160,8 @@ fn test_max_spread_with_diff_decimal() {
             amount: Uint128::from(989999u128),
         },
         Uint128::zero(),
+        8u8,
+        6u8,
     )
     .unwrap_err();
 }
@@ -1185,6 +1197,7 @@ fn test_query_pool() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
