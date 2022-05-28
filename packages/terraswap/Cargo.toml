@@ -1,7 +1,7 @@
 [package]
 name = "terraswap"
-version = "2.5.1"
-authors = ["Terraform Labs, PTE.", "DELIGHTLABS"]
+version = "2.6.0"
+authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
 edition = "2018"
 description = "Common terraswap types"
 license = "Apache-2.0"
@@ -17,15 +17,15 @@ documentation = "https://docs.terraswap.io"
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cw20 = { version = "0.8.0" } 
-cosmwasm-storage = { version = "0.16.0" }
-terra-cosmwasm = { version = "2.2.0" }
-cosmwasm-std = { version = "0.16.0" }
-schemars = "0.8.1"
+cw20 = { version = "0.13.2" } 
+cosmwasm-storage = { version = "1.0.0" }
+cosmwasm-std = { version = "1.0.0", features = ["stargate"] }
+schemars = "0.8.10"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+protobuf = { version = "2", features = ["with-bytes"] }
 
 [dev-dependencies]
-cosmwasm-schema = "0.16.0"
+cosmwasm-schema = { version = "1.0.0" }
 
 [profile.release]
 opt-level = 3

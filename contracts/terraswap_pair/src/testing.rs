@@ -3,12 +3,12 @@ use crate::contract::{
     query_simulation, reply,
 };
 use crate::error::ContractError;
-use crate::mock_querier::mock_dependencies;
+use terraswap::mock_querier::mock_dependencies;
 
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, BankMsg, Coin, ContractResult, CosmosMsg, Decimal, Reply, ReplyOn, Response,
-    StdError, SubMsg, SubMsgExecutionResponse, Uint128, WasmMsg,
+    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg,
+    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
@@ -32,6 +32,7 @@ fn proper_initialization() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -55,7 +56,7 @@ fn proper_initialization() {
                 })
                 .unwrap(),
                 funds: vec![],
-                label: "".to_string(),
+                label: "lp".to_string(),
                 admin: None,
             }
             .into(),
@@ -68,7 +69,7 @@ fn proper_initialization() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -122,6 +123,7 @@ fn provide_liquidity() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -132,7 +134,7 @@ fn provide_liquidity() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -507,10 +509,6 @@ fn withdraw_liquidity() {
         amount: Uint128::from(100u128),
     }]);
 
-    deps.querier.with_tax(
-        Decimal::zero(),
-        &[(&"uusd".to_string(), &Uint128::from(1000000u128))],
-    );
     deps.querier.with_token_balances(&[
         (
             &"liquidity0000".to_string(),
@@ -532,6 +530,7 @@ fn withdraw_liquidity() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -542,7 +541,7 @@ fn withdraw_liquidity() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -627,11 +626,6 @@ fn try_native_to_token() {
         amount: collateral_pool_amount + offer_amount, /* user deposit must be pre-applied */
     }]);
 
-    deps.querier.with_tax(
-        Decimal::zero(),
-        &[(&"uusd".to_string(), &Uint128::from(1000000u128))],
-    );
-
     deps.querier.with_token_balances(&[
         (
             &"liquidity0000".to_string(),
@@ -653,6 +647,7 @@ fn try_native_to_token() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -663,7 +658,7 @@ fn try_native_to_token() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -709,8 +704,6 @@ fn try_native_to_token() {
     let expected_return_amount = expected_ret_amount
         .checked_sub(expected_commission_amount)
         .unwrap();
-    let expected_tax_amount = Uint128::zero(); // no tax for token
-
     // check simulation res
     deps.querier.with_balance(&[(
         &MOCK_CONTRACT_ADDR.to_string(),
@@ -773,7 +766,6 @@ fn try_native_to_token() {
             attr("ask_asset", "asset0000"),
             attr("offer_amount", offer_amount.to_string()),
             attr("return_amount", expected_return_amount.to_string()),
-            attr("tax_amount", expected_tax_amount.to_string()),
             attr("spread_amount", expected_spread_amount.to_string()),
             attr("commission_amount", expected_commission_amount.to_string()),
         ]
@@ -805,10 +797,6 @@ fn try_token_to_native() {
         denom: "uusd".to_string(),
         amount: collateral_pool_amount,
     }]);
-    deps.querier.with_tax(
-        Decimal::percent(1),
-        &[(&"uusd".to_string(), &Uint128::from(1000000u128))],
-    );
     deps.querier.with_token_balances(&[
         (
             &"liquidity0000".to_string(),
@@ -833,6 +821,7 @@ fn try_token_to_native() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [8u8, 8u8],
     };
 
     let env = mock_env();
@@ -843,7 +832,7 @@ fn try_token_to_native() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
             data: Some(
                 vec![
@@ -903,15 +892,6 @@ fn try_token_to_native() {
     let expected_return_amount = expected_ret_amount
         .checked_sub(expected_commission_amount)
         .unwrap();
-    let expected_tax_amount = std::cmp::min(
-        Uint128::from(1000000u128),
-        expected_return_amount
-            .checked_sub(
-                expected_return_amount
-                    .multiply_ratio(Uint128::from(100u128), Uint128::from(101u128)),
-            )
-            .unwrap(),
-    );
     // check simulation res
     // return asset token balance as normal
     deps.querier.with_token_balances(&[
@@ -977,7 +957,6 @@ fn try_token_to_native() {
             attr("ask_asset", "uusd"),
             attr("offer_amount", offer_amount.to_string()),
             attr("return_amount", expected_return_amount.to_string()),
-            attr("tax_amount", expected_tax_amount.to_string()),
             attr("spread_amount", expected_spread_amount.to_string()),
             attr("commission_amount", expected_commission_amount.to_string()),
         ]
@@ -989,8 +968,6 @@ fn try_token_to_native() {
             amount: vec![Coin {
                 denom: "uusd".to_string(),
                 amount: expected_return_amount
-                    .checked_sub(expected_tax_amount)
-                    .unwrap(),
             }],
         })),
         msg_transfer,
@@ -1018,70 +995,175 @@ fn try_token_to_native() {
 
 #[test]
 fn test_max_spread() {
+    let offer_asset_info = AssetInfo::NativeToken {
+        denom: "offer_asset".to_string(),
+    };
+    let ask_asset_info = AssetInfo::NativeToken {
+        denom: "ask_asset_info".to_string(),
+    };
+
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200000000u128),
-        Uint128::from(989999u128),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(989999u128),
+        },
         Uint128::zero(),
+        6u8,
+        6u8,
     )
     .unwrap_err();
 
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200000000u128),
-        Uint128::from(990000u128),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(990000u128),
+        },
         Uint128::zero(),
+        6u8,
+        6u8,
     )
     .unwrap();
 
     assert_max_spread(
         None,
         Some(Decimal::percent(1)),
-        Uint128::zero(),
-        Uint128::from(989999u128),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::zero(),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(989999u128),
+        },
         Uint128::from(10001u128),
+        6u8,
+        6u8,
     )
     .unwrap_err();
 
     assert_max_spread(
         None,
         Some(Decimal::percent(1)),
-        Uint128::zero(),
-        Uint128::from(990000u128),
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::zero(),
+        },
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::from(990000u128),
+        },
         Uint128::from(10000u128),
+        6u8,
+        6u8,
     )
     .unwrap();
 }
 
 #[test]
-fn test_deduct() {
+fn test_max_spread_with_diff_decimal() {
+    let token_addr = "ask_asset_info".to_string();
+
     let mut deps = mock_dependencies(&[]);
+    deps.querier.with_token_balances(&[(
+        &token_addr,
+        &[(
+            &MOCK_CONTRACT_ADDR.to_string(),
+            &Uint128::from(10000000000u64),
+        )],
+    )]);
+    let offer_asset_info = AssetInfo::NativeToken {
+        denom: "offer_asset".to_string(),
+    };
+    let ask_asset_info = AssetInfo::Token {
+        contract_addr: token_addr.to_string(),
+    };
 
-    let tax_rate = Decimal::percent(2);
-    let tax_cap = Uint128::from(1_000_000u128);
-    deps.querier.with_tax(
-        Decimal::percent(2),
-        &[(&"uusd".to_string(), &Uint128::from(1000000u128))],
-    );
-
-    let amount = Uint128::from(1_000_000_000u128);
-    let expected_after_amount = std::cmp::max(
-        amount.checked_sub(amount * tax_rate).unwrap(),
-        amount.checked_sub(tax_cap).unwrap(),
-    );
-
-    let after_amount = (Asset {
-        info: AssetInfo::NativeToken {
-            denom: "uusd".to_string(),
+    assert_max_spread(
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(1200000000u128),
         },
-        amount,
-    })
-    .deduct_tax(&deps.as_ref().querier)
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(100000000u128),
+        },
+        Uint128::zero(),
+        6u8,
+        8u8,
+    )
     .unwrap();
 
-    assert_eq!(expected_after_amount, after_amount.amount);
+    assert_max_spread(
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::from(98999999u128),
+        },
+        Uint128::zero(),
+        6u8,
+        8u8,
+    )
+    .unwrap_err();
+
+    let offer_asset_info = AssetInfo::Token {
+        contract_addr: token_addr,
+    };
+    let ask_asset_info = AssetInfo::NativeToken {
+        denom: "offer_asset".to_string(),
+    };
+
+    assert_max_spread(
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(120000000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(1000000u128),
+        },
+        Uint128::zero(),
+        8u8,
+        6u8,
+    )
+    .unwrap();
+
+    assert_max_spread(
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::from(120000000000u128),
+        },
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::from(989999u128),
+        },
+        Uint128::zero(),
+        8u8,
+        6u8,
+    )
+    .unwrap_err();
 }
 
 #[test]
@@ -1115,6 +1197,7 @@ fn test_query_pool() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -1125,7 +1208,7 @@ fn test_query_pool() {
     // store liquidity token
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
             data: Some(
                 vec![

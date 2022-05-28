@@ -3,13 +3,14 @@ use crate::factory::QueryMsg as FactoryQueryMsg;
 use crate::pair::{QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
 
 use cosmwasm_std::{
-    to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, QuerierWrapper,
+    to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, Empty, QuerierWrapper,
     QueryRequest, StdResult, Uint128, WasmQuery,
 };
+
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
 pub fn query_balance(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<Empty>,
     account_addr: Addr,
     denom: String,
 ) -> StdResult<Uint128> {
@@ -21,7 +22,10 @@ pub fn query_balance(
     Ok(balance.amount.amount)
 }
 
-pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdResult<Vec<Coin>> {
+pub fn query_all_balances(
+    querier: &QuerierWrapper<Empty>,
+    account_addr: Addr,
+) -> StdResult<Vec<Coin>> {
     // load price form the oracle
     let all_balances: AllBalanceResponse =
         querier.query(&QueryRequest::Bank(BankQuery::AllBalances {
@@ -31,7 +35,7 @@ pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdRe
 }
 
 pub fn query_token_balance(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<Empty>,
     contract_addr: Addr,
     account_addr: Addr,
 ) -> StdResult<Uint128> {
@@ -46,18 +50,20 @@ pub fn query_token_balance(
     Ok(res.balance)
 }
 
-pub fn query_supply(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<Uint128> {
-    // load price form the oracle
+pub fn query_token_info(
+    querier: &QuerierWrapper<Empty>,
+    contract_addr: Addr,
+) -> StdResult<TokenInfoResponse> {
     let token_info: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: contract_addr.to_string(),
         msg: to_binary(&Cw20QueryMsg::TokenInfo {})?,
     }))?;
 
-    Ok(token_info.total_supply)
+    Ok(token_info)
 }
 
 pub fn query_pair_info(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<Empty>,
     factory_contract: Addr,
     asset_infos: &[AssetInfo; 2],
 ) -> StdResult<PairInfo> {
@@ -70,7 +76,7 @@ pub fn query_pair_info(
 }
 
 pub fn simulate(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<Empty>,
     pair_contract: Addr,
     offer_asset: &Asset,
 ) -> StdResult<SimulationResponse> {
@@ -83,7 +89,7 @@ pub fn simulate(
 }
 
 pub fn reverse_simulate(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<Empty>,
     pair_contract: Addr,
     ask_asset: &Asset,
 ) -> StdResult<ReverseSimulationResponse> {

@@ -26,7 +26,7 @@
 #[derive(PartialEq,Clone,Default)]
 pub struct MsgInstantiateContractResponse {
     // message fields
-    pub contract_address: ::std::string::String,
+    pub address: ::std::string::String,
     pub data: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -44,30 +44,30 @@ impl MsgInstantiateContractResponse {
         ::std::default::Default::default()
     }
 
-    // string contract_address = 1;
+    // string address = 1;
 
 
-    pub fn get_contract_address(&self) -> &str {
-        &self.contract_address
+    pub fn get_address(&self) -> &str {
+        &self.address
     }
-    pub fn clear_contract_address(&mut self) {
-        self.contract_address.clear();
+    pub fn clear_address(&mut self) {
+        self.address.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_contract_address(&mut self, v: ::std::string::String) {
-        self.contract_address = v;
+    pub fn set_address(&mut self, v: ::std::string::String) {
+        self.address = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_contract_address(&mut self) -> &mut ::std::string::String {
-        &mut self.contract_address
+    pub fn mut_address(&mut self) -> &mut ::std::string::String {
+        &mut self.address
     }
 
     // Take field
-    pub fn take_contract_address(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.contract_address, ::std::string::String::new())
+    pub fn take_address(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.address, ::std::string::String::new())
     }
 
     // bytes data = 2;
@@ -107,7 +107,7 @@ impl ::protobuf::Message for MsgInstantiateContractResponse {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.contract_address)?;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.address)?;
                 },
                 2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.data)?;
@@ -124,8 +124,8 @@ impl ::protobuf::Message for MsgInstantiateContractResponse {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.contract_address.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.contract_address);
+        if !self.address.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.address);
         }
         if !self.data.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.data);
@@ -136,8 +136,8 @@ impl ::protobuf::Message for MsgInstantiateContractResponse {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.contract_address.is_empty() {
-            os.write_string(1, &self.contract_address)?;
+        if !self.address.is_empty() {
+            os.write_string(1, &self.address)?;
         }
         if !self.data.is_empty() {
             os.write_bytes(2, &self.data)?;
@@ -181,9 +181,9 @@ impl ::protobuf::Message for MsgInstantiateContractResponse {
         descriptor.get(|| {
             let mut fields = ::std::vec::Vec::new();
             fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                "contract_address",
-                |m: &MsgInstantiateContractResponse| { &m.contract_address },
-                |m: &mut MsgInstantiateContractResponse| { &mut m.contract_address },
+                "address",
+                |m: &MsgInstantiateContractResponse| { &m.address },
+                |m: &mut MsgInstantiateContractResponse| { &mut m.address },
             ));
             fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                 "data",
@@ -206,7 +206,7 @@ impl ::protobuf::Message for MsgInstantiateContractResponse {
 
 impl ::protobuf::Clear for MsgInstantiateContractResponse {
     fn clear(&mut self) {
-        self.contract_address.clear();
+        self.address.clear();
         self.data.clear();
         self.unknown_fields.clear();
     }
@@ -225,21 +225,20 @@ impl ::protobuf::reflect::ProtobufValue for MsgInstantiateContractResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x12src/response.proto\"_\n\x1eMsgInstantiateContractResponse\x12)\n\
-    \x10contract_address\x18\x01\x20\x01(\tR\x0fcontractAddress\x12\x12\n\
-    \x04data\x18\x02\x20\x01(\x0cR\x04dataJ\xf8\x02\n\x06\x12\x04\0\0\x08\
-    \x03\n\x08\n\x01\x0c\x12\x03\0\0\x12\n_\n\x02\x04\0\x12\x04\x03\0\x08\
-    \x03\x1aS\x20MsgInstantiateContractResponse\x20defines\x20the\x20Msg/Ins\
-    tantiateContract\x20response\x20type.\n\n\n\n\x03\x04\0\x01\x12\x03\x03\
-    \x08&\nR\n\x04\x04\0\x02\0\x12\x03\x05\x04\x20\x1aE\x20ContractAddress\
-    \x20is\x20the\x20bech32\x20address\x20of\x20the\x20new\x20contract\x20in\
-    stance.\n\n\x0c\n\x05\x04\0\x02\0\x05\x12\x03\x05\x04\n\n\x0c\n\x05\x04\
-    \0\x02\0\x01\x12\x03\x05\x0b\x1b\n\x0c\n\x05\x04\0\x02\0\x03\x12\x03\x05\
-    \x1e\x1f\nO\n\x04\x04\0\x02\x01\x12\x03\x07\x04\x13\x1aB\x20Data\x20cont\
-    ains\x20base64-encoded\x20bytes\x20to\x20returned\x20from\x20the\x20cont\
-    ract\n\n\x0c\n\x05\x04\0\x02\x01\x05\x12\x03\x07\x04\t\n\x0c\n\x05\x04\0\
-    \x02\x01\x01\x12\x03\x07\n\x0e\n\x0c\n\x05\x04\0\x02\x01\x03\x12\x03\x07\
-    \x11\x12b\x06proto3\
+    \n\x12src/response.proto\"N\n\x1eMsgInstantiateContractResponse\x12\x18\
+    \n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04data\x18\x02\
+    \x20\x01(\x0cR\x04dataJ\xde\x02\n\x06\x12\x04\0\0\x08\x01\n\x08\n\x01\
+    \x0c\x12\x03\0\0\x12\nM\n\x02\x04\0\x12\x04\x03\0\x08\x01\x1aA\x20MsgIns\
+    tantiateContractResponse\x20return\x20instantiation\x20result\x20data\n\
+    \n\n\n\x03\x04\0\x01\x12\x03\x03\x08&\nJ\n\x04\x04\0\x02\0\x12\x03\x05\
+    \x02\x15\x1a=\x20Address\x20is\x20the\x20bech32\x20address\x20of\x20the\
+    \x20new\x20contract\x20instance.\n\n\x0c\n\x05\x04\0\x02\0\x05\x12\x03\
+    \x05\x02\x08\n\x0c\n\x05\x04\0\x02\0\x01\x12\x03\x05\t\x10\n\x0c\n\x05\
+    \x04\0\x02\0\x03\x12\x03\x05\x13\x14\nO\n\x04\x04\0\x02\x01\x12\x03\x07\
+    \x02\x11\x1aB\x20Data\x20contains\x20base64-encoded\x20bytes\x20to\x20re\
+    turned\x20from\x20the\x20contract\n\n\x0c\n\x05\x04\0\x02\x01\x05\x12\
+    \x03\x07\x02\x07\n\x0c\n\x05\x04\0\x02\x01\x01\x12\x03\x07\x08\x0c\n\x0c\
+    \n\x05\x04\0\x02\x01\x03\x12\x03\x07\x0f\x10b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;
