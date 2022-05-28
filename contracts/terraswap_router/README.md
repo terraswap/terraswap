@@ -5,7 +5,7 @@ The Router Contract contains the logic to facilitate multi-hop swap operations v
 **Only Terraswap is supported.**
 
 phoenix-1 Contract:
-- 
+- https://finder.terra.money/mainnet/address/terra13ehuhysn5mqjeaheeuew2gjs785f6k7jm8vfsqg3jhtpkwppcmzqcu7chk
 
 pisco-1 Contract: 
 - https://finder.terra.money/testnet/address/terra1xp6xe6uwqrspumrkazdg90876ns4h78yw03vfxghhcy03yexcrcsdaqvc8
