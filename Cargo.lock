@@ -709,7 +709,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap"
-version = "2.6.0"
+version = "2.6.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
