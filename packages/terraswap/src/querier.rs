@@ -100,3 +100,15 @@ pub fn reverse_simulate(
         })?,
     }))
 }
+
+pub fn query_pair_info_from_pair(
+    querier: &QuerierWrapper<Empty>,
+    pair_contract: Addr,
+) -> StdResult<PairInfo> {
+    let pair_info: PairInfo = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: pair_contract.to_string(),
+        msg: to_binary(&PairQueryMsg::Pair {})?,
+    }))?;
+
+    Ok(pair_info)
+}

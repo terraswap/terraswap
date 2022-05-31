@@ -1,3 +1,7 @@
+# 2.6.1
+
+* [a422601](https://github.com/terraswap/terraswap/pull/49/commits/a4226011240a761f1fd7396263745c5cd6bc12b1) Refactoring querier
+
 # 2.6.0
 
 Terra V2
