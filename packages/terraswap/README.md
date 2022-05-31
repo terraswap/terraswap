@@ -33,8 +33,10 @@ It is used to represent response data of [Pair-Info-Querier](#Pair-Info-Querier)
 
 ```rust
 pub struct PairInfo {
-    pub contract_addr: HumanAddr,
     pub asset_infos: [AssetInfo; 2],
+    pub contract_addr: String,
+    pub liquidity_token: String,
+    pub asset_decimals: [u8; 2],
 }
 ```
 ## Queriers
@@ -44,9 +46,9 @@ pub struct PairInfo {
 It uses CosmWasm standard interface to query the account balance to chain.
 
 ```rust
-pub fn query_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    account_addr: &HumanAddr,
+pub fn query_balance(
+    querier: &QuerierWrapper<Empty>,
+    account_addr: Addr,
     denom: String,
 ) -> StdResult<Uint128>
 ```
@@ -56,54 +58,43 @@ pub fn query_balance<S: Storage, A: Api, Q: Querier>(
 It provides simliar query interface with [Native-Token-Balance-Querier](Native-Token-Balance-Querier) for CW20 token balance. 
 
 ```rust
-pub fn query_token_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    contract_addr: &HumanAddr,
-    account_addr: &HumanAddr,
+pub fn query_token_balance(
+    querier: &QuerierWrapper<Empty>,
+    contract_addr: Addr,
+    account_addr: Addr,
 ) -> StdResult<Uint128>
 ```
 
-### Token Supply Querier
+### Token Info Querier
 
-It provides token supply querier for CW20 token contract.
-
-```rust
-pub fn query_supply<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    contract_addr: &HumanAddr,
-) -> StdResult<Uint128>
-```
-
-### Token Decimals Querier
-
-It is token decimals querier for CW20 token contract.
+It provides token info querier for CW20 token contract.
 
 ```rust
-pub fn query_decimals<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    contract_addr: &HumanAddr,
-) -> StdResult<u8>
+pub fn query_token_info(
+    querier: &QuerierWrapper<Empty>,
+    contract_addr: Addr,
+) -> StdResult<TokenInfoResponse>
 ```
 
-### Pair Info Querier
+### Pair Info Querier From Factory
 
 It also provides the query interface to query avaliable terraswap pair contract info. Any contract can query pair info to terraswap factory contract.
 
 ```rust
-pub fn query_pair_contract<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    contract_addr: &HumanAddr,
+pub fn query_pair_info(
+    querier: &QuerierWrapper<Empty>,
+    factory_contract: Addr,
     asset_infos: &[AssetInfo; 2],
-) -> StdResult<HumanAddr>
+) -> StdResult<PairInfo>
 ```
 
-### Liquidity Token Querier
+### Pair Info Querier From Pair
 
-It returns liquidity token contract address of terraswap pair contract. 
+It also provides the query interface to query avaliable terraswap pair contract info. Any contract can query pair info to pair contract.
 
 ```rust
-pub fn query_liquidity_token<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    contract_addr: &HumanAddr,
-) -> StdResult<HumanAddr>
+pub fn query_pair_info_from_pair(
+    querier: &QuerierWrapper<Empty>,
+    pair_contract: Addr,
+) -> StdResult<PairInfo>
 ```
