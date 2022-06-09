@@ -1,4 +1,7 @@
 # TerraSwap
+[![terraswap on crates.io](https://img.shields.io/crates/v/terraswap.svg)](https://crates.io/crates/terraswap)
+[![workflow](https://github.com/terraswap/terraswap/actions/workflows/tests.yml/badge.svg)](https://github.com/terraswap/terraswap/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/terraswap/terraswap/branch/main/graph/badge.svg?token=ERMFLEY6Y7)](https://codecov.io/gh/terraswap/terraswap)
 
 Uniswap-inspired automated market-maker (AMM) protocol powered by Smart Contracts on the [Terra](https://terra.money) blockchain.
 
