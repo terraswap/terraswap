@@ -7,8 +7,7 @@ use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Empty, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128,
-    WasmMsg,
+    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
@@ -31,7 +30,7 @@ const INSTANTIATE_REPLY_ID: u64 = 1;
 const COMMISSION_RATE: &str = "0.003";
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -75,7 +74,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -118,7 +117,7 @@ pub fn execute(
 }
 
 pub fn receive_cw20(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
@@ -185,7 +184,7 @@ pub fn receive_cw20(
 
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut<Empty>, _env: Env, msg: Reply) -> StdResult<Response> {
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
     let data = msg.result.unwrap().data.unwrap();
     let res: MsgInstantiateContractResponse =
         Message::parse_from_bytes(data.as_slice()).map_err(|_| {
@@ -204,7 +203,7 @@ pub fn reply(deps: DepsMut<Empty>, _env: Env, msg: Reply) -> StdResult<Response>
 
 /// CONTRACT - should approve contract to use the amount of token
 pub fn provide_liquidity(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     assets: [Asset; 2],
@@ -300,7 +299,7 @@ pub fn provide_liquidity(
 }
 
 pub fn withdraw_liquidity(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     env: Env,
     _info: MessageInfo,
     sender: Addr,
@@ -350,7 +349,7 @@ pub fn withdraw_liquidity(
 // CONTRACT - a user must do token approval
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     sender: Addr,
@@ -437,7 +436,7 @@ pub fn swap(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps<Empty>, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Pair {} => Ok(to_binary(&query_pair_info(deps)?)?),
         QueryMsg::Pool {} => Ok(to_binary(&query_pool(deps)?)?),
@@ -450,14 +449,14 @@ pub fn query(deps: Deps<Empty>, _env: Env, msg: QueryMsg) -> Result<Binary, Cont
     }
 }
 
-pub fn query_pair_info(deps: Deps<Empty>) -> Result<PairInfo, ContractError> {
+pub fn query_pair_info(deps: Deps) -> Result<PairInfo, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let pair_info = pair_info.to_normal(deps.api)?;
 
     Ok(pair_info)
 }
 
-pub fn query_pool(deps: Deps<Empty>) -> Result<PoolResponse, ContractError> {
+pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let contract_addr = deps.api.addr_humanize(&pair_info.contract_addr)?;
     let assets: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, contract_addr)?;
@@ -476,7 +475,7 @@ pub fn query_pool(deps: Deps<Empty>) -> Result<PoolResponse, ContractError> {
 }
 
 pub fn query_simulation(
-    deps: Deps<Empty>,
+    deps: Deps,
     offer_asset: Asset,
 ) -> Result<SimulationResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -507,7 +506,7 @@ pub fn query_simulation(
 }
 
 pub fn query_reverse_simulation(
-    deps: Deps<Empty>,
+    deps: Deps,
     ask_asset: Asset,
 ) -> Result<ReverseSimulationResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;

@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
+    from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 
@@ -21,7 +21,7 @@ use terraswap::router::{
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -37,12 +37,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(
-    deps: DepsMut<Empty>,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::ExecuteSwapOperations {
@@ -96,7 +91,7 @@ fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<Opti
 }
 
 pub fn receive_cw20(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     env: Env,
     _info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
@@ -122,7 +117,7 @@ pub fn receive_cw20(
 }
 
 pub fn execute_swap_operations(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     env: Env,
     sender: Addr,
     operations: Vec<SwapOperation>,
@@ -180,7 +175,7 @@ pub fn execute_swap_operations(
 }
 
 fn assert_minium_receive(
-    deps: Deps<Empty>,
+    deps: Deps,
     asset_info: AssetInfo,
     prev_balance: Uint128,
     minium_receive: Uint128,
@@ -200,7 +195,7 @@ fn assert_minium_receive(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps<Empty>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::SimulateSwapOperations {
@@ -216,7 +211,7 @@ pub fn query(deps: Deps<Empty>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-pub fn query_config(deps: Deps<Empty>) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let state = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         terraswap_factory: deps
@@ -229,7 +224,7 @@ pub fn query_config(deps: Deps<Empty>) -> StdResult<ConfigResponse> {
 }
 
 fn simulate_swap_operations(
-    deps: Deps<Empty>,
+    deps: Deps,
     offer_amount: Uint128,
     operations: Vec<SwapOperation>,
 ) -> StdResult<SimulateSwapOperationsResponse> {
@@ -276,7 +271,7 @@ fn simulate_swap_operations(
 }
 
 fn reverse_simulate_swap_operations(
-    deps: Deps<Empty>,
+    deps: Deps,
     ask_amount: Uint128,
     operations: Vec<SwapOperation>,
 ) -> StdResult<SimulateSwapOperationsResponse> {
@@ -312,7 +307,7 @@ fn reverse_simulate_swap_operations(
 }
 
 fn reverse_simulate_return_amount(
-    deps: Deps<Empty>,
+    deps: Deps,
     factory: Addr,
     ask_amount: Uint128,
     offer_asset_info: AssetInfo,

@@ -47,7 +47,7 @@ It uses CosmWasm standard interface to query the account balance to chain.
 
 ```rust
 pub fn query_balance(
-    querier: &QuerierWrapper<Empty>,
+    querier: &QuerierWrapper,
     account_addr: Addr,
     denom: String,
 ) -> StdResult<Uint128>
@@ -59,7 +59,7 @@ It provides simliar query interface with [Native-Token-Balance-Querier](Native-T
 
 ```rust
 pub fn query_token_balance(
-    querier: &QuerierWrapper<Empty>,
+    querier: &QuerierWrapper,
     contract_addr: Addr,
     account_addr: Addr,
 ) -> StdResult<Uint128>
@@ -71,7 +71,7 @@ It provides token info querier for CW20 token contract.
 
 ```rust
 pub fn query_token_info(
-    querier: &QuerierWrapper<Empty>,
+    querier: &QuerierWrapper,
     contract_addr: Addr,
 ) -> StdResult<TokenInfoResponse>
 ```
@@ -82,7 +82,7 @@ It also provides the query interface to query avaliable terraswap pair contract 
 
 ```rust
 pub fn query_pair_info(
-    querier: &QuerierWrapper<Empty>,
+    querier: &QuerierWrapper,
     factory_contract: Addr,
     asset_infos: &[AssetInfo; 2],
 ) -> StdResult<PairInfo>
@@ -94,7 +94,7 @@ It also provides the query interface to query avaliable terraswap pair contract 
 
 ```rust
 pub fn query_pair_info_from_pair(
-    querier: &QuerierWrapper<Empty>,
+    querier: &QuerierWrapper,
     pair_contract: Addr,
 ) -> StdResult<PairInfo>
 ```

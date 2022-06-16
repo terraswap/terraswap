@@ -7,7 +7,7 @@ use cosmwasm_std::testing::{
     mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
 };
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, Empty, OwnedDeps, Reply, ReplyOn, StdError, SubMsg,
+    attr, coin, from_binary, to_binary, OwnedDeps, Reply, ReplyOn, StdError, SubMsg,
     SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use terraswap::asset::{AssetInfo, PairInfo};
@@ -103,8 +103,8 @@ fn update_config() {
 }
 
 fn init(
-    mut deps: OwnedDeps<MockStorage, MockApi, WasmMockQuerier, Empty>,
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, Empty> {
+    mut deps: OwnedDeps<MockStorage, MockApi, WasmMockQuerier>,
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,

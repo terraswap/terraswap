@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response,
-    StdError, StdResult, WasmMsg,
+    to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    StdResult, WasmMsg,
 };
 
 use crate::state::{Config, CONFIG};
@@ -14,7 +14,7 @@ use terraswap::router::SwapOperation;
 /// Execute swap operation
 /// swap all offer asset to ask asset
 pub fn execute_swap_operation(
-    deps: DepsMut<Empty>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     operation: SwapOperation,
@@ -66,7 +66,7 @@ pub fn execute_swap_operation(
 }
 
 pub fn asset_into_swap_msg(
-    _deps: Deps<Empty>,
+    _deps: Deps,
     pair_contract: Addr,
     offer_asset: Asset,
     max_spread: Option<Decimal>,
