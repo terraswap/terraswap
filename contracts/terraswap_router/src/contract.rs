@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
+    Response, StdError, StdResult, Uint128, WasmMsg,
 };
 
 use crate::operations::execute_swap_operation;
@@ -12,8 +12,8 @@ use crate::state::{Config, CONFIG};
 use cw20::Cw20ReceiveMsg;
 use std::collections::HashMap;
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::pair::{QueryMsg as PairQueryMsg, SimulationResponse};
-use terraswap::querier::{query_pair_info, reverse_simulate};
+use terraswap::pair::SimulationResponse;
+use terraswap::querier::{query_pair_info, reverse_simulate, simulate};
 use terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
@@ -249,16 +249,14 @@ fn simulate_swap_operations(
                     &[offer_asset_info.clone(), ask_asset_info.clone()],
                 )?;
 
-                let res: SimulationResponse =
-                    deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-                        contract_addr: pair_info.contract_addr.to_string(),
-                        msg: to_binary(&PairQueryMsg::Simulation {
-                            offer_asset: Asset {
-                                info: offer_asset_info,
-                                amount: offer_amount,
-                            },
-                        })?,
-                    }))?;
+                let res: SimulationResponse = simulate(
+                    &deps.querier,
+                    Addr::unchecked(pair_info.contract_addr),
+                    &Asset {
+                        info: offer_asset_info,
+                        amount: offer_amount,
+                    },
+                )?;
 
                 offer_amount = res.return_amount;
             }
