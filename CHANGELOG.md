@@ -1,3 +1,8 @@
+# 2.6.2
+
+* [5337ee7](https://github.com/terraswap/terraswap/pull/51/commits/5337ee7b54833346d7d50820b9f7236786c8329c) Clean up generic
+* [c1ffc5d](https://github.com/terraswap/terraswap/pull/51/commits/c1ffc5dc87ecf63ba22e7f3afea6eb90d6be96c4) Use package in simulate
+
 # 2.6.1
 
 * [a422601](https://github.com/terraswap/terraswap/pull/49/commits/a4226011240a761f1fd7396263745c5cd6bc12b1) Refactoring querier
