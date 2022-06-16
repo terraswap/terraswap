@@ -58,3 +58,92 @@ fn is_valid_symbol(symbol: &str) -> bool {
     }
     true
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn get_cap() {
+        let msg = InstantiateMsg {
+            decimals: 6u8,
+            initial_balances: vec![],
+            mint: Some(MinterResponse {
+                cap: Some(Uint128::from(1u128)),
+                minter: "minter0000".to_string(),
+            }),
+            name: "test_token".to_string(),
+            symbol: "TNT".to_string(),
+        };
+
+        assert_eq!(msg.get_cap(), Some(Uint128::from(1u128)))
+    }
+
+    #[test]
+    fn validate() {
+        let valid_msg = InstantiateMsg {
+            decimals: 6u8,
+            initial_balances: vec![],
+            mint: Some(MinterResponse {
+                cap: Some(Uint128::from(1u128)),
+                minter: "minter0000".to_string(),
+            }),
+            name: "test_token".to_string(),
+            symbol: "TNT".to_string(),
+        };
+
+        assert_eq!(valid_msg.validate(), Ok(()));
+
+        let name_invalid_msg = InstantiateMsg {
+            decimals: 6u8,
+            initial_balances: vec![],
+            mint: Some(MinterResponse {
+                cap: Some(Uint128::from(1u128)),
+                minter: "minter0000".to_string(),
+            }),
+            name: "a".to_string(),
+            symbol: "TNT".to_string(),
+        };
+
+        assert_eq!(
+            name_invalid_msg.validate(),
+            Err(StdError::generic_err(
+                "Name is not in the expected format (3-50 UTF-8 bytes)",
+            ))
+        );
+
+        let symbol_invalid_msg = InstantiateMsg {
+            decimals: 6u8,
+            initial_balances: vec![],
+            mint: Some(MinterResponse {
+                cap: Some(Uint128::from(1u128)),
+                minter: "minter0000".to_string(),
+            }),
+            name: "test_token".to_string(),
+            symbol: "TN".to_string(),
+        };
+
+        assert_eq!(
+            symbol_invalid_msg.validate(),
+            Err(StdError::generic_err(
+                "Ticker symbol is not in expected format [a-zA-Z\\-]{3,12}",
+            ))
+        );
+
+        let decimal_invalid_msg = InstantiateMsg {
+            decimals: 20u8,
+            initial_balances: vec![],
+            mint: Some(MinterResponse {
+                cap: Some(Uint128::from(1u128)),
+                minter: "minter0000".to_string(),
+            }),
+            name: "test_token".to_string(),
+            symbol: "TNT".to_string(),
+        };
+
+        assert_eq!(
+            decimal_invalid_msg.validate(),
+            Err(StdError::generic_err("Decimals must not exceed 18"))
+        );
+    }
+}
