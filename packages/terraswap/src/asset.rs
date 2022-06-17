@@ -4,8 +4,8 @@ use std::fmt;
 
 use crate::querier::{query_balance, query_token_balance, query_token_info};
 use cosmwasm_std::{
-    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Empty, MessageInfo,
-    QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, MessageInfo, QuerierWrapper,
+    StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -128,7 +128,7 @@ impl AssetInfo {
     }
     pub fn query_pool(
         &self,
-        querier: &QuerierWrapper<Empty>,
+        querier: &QuerierWrapper,
         api: &dyn Api,
         pool_addr: Addr,
     ) -> StdResult<Uint128> {
@@ -163,11 +163,7 @@ impl AssetInfo {
         }
     }
 
-    pub fn query_decimals(
-        &self,
-        account_addr: Addr,
-        querier: &QuerierWrapper<Empty>,
-    ) -> StdResult<u8> {
+    pub fn query_decimals(&self, account_addr: Addr, querier: &QuerierWrapper) -> StdResult<u8> {
         match self {
             AssetInfo::NativeToken { denom } => {
                 // check valid
@@ -289,7 +285,7 @@ impl PairInfoRaw {
 
     pub fn query_pools(
         &self,
-        querier: &QuerierWrapper<Empty>,
+        querier: &QuerierWrapper,
         api: &dyn Api,
         contract_addr: Addr,
     ) -> StdResult<[Asset; 2]> {

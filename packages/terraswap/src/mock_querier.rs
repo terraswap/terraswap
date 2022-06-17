@@ -1,13 +1,13 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Api, Binary, Coin, ContractResult, Empty, OwnedDeps,
-    Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
+    from_binary, from_slice, to_binary, Coin, ContractResult, Empty, OwnedDeps, Querier,
+    QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::panic;
 
-use crate::asset::{AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw};
+use crate::asset::{AssetInfo, PairInfo};
 use crate::factory::QueryMsg as FactoryQueryMsg;
 use crate::pair::QueryMsg as PairQueryMsg;
 use crate::pair::{ReverseSimulationResponse, SimulationResponse};
@@ -19,7 +19,7 @@ use std::iter::FromIterator;
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
     contract_balance: &[Coin],
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, Empty> {
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
     let custom_querier: WasmMockQuerier =
         WasmMockQuerier::new(MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]));
 
@@ -32,7 +32,7 @@ pub fn mock_dependencies(
 }
 
 pub struct WasmMockQuerier {
-    base: MockQuerier<Empty>,
+    base: MockQuerier,
     token_querier: TokenQuerier,
     terraswap_factory_querier: TerraswapFactoryQuerier,
 }
@@ -223,51 +223,13 @@ impl WasmMockQuerier {
                     },
                 },
             },
-            QueryRequest::Wasm(WasmQuery::Raw { contract_addr, key }) => {
-                let key: &[u8] = key.as_slice();
-                let prefix_pair_info = Binary::from("pair_info".as_bytes());
-
-                if key == prefix_pair_info.as_slice() {
-                    let pair_info: PairInfo =
-                        match self.terraswap_factory_querier.pairs.get(contract_addr) {
-                            Some(v) => v.clone(),
-                            None => {
-                                return SystemResult::Err(SystemError::InvalidRequest {
-                                    error: format!("PairInfo is not found for {}", contract_addr),
-                                    request: key.into(),
-                                })
-                            }
-                        };
-
-                    let api: MockApi = MockApi::default();
-                    SystemResult::Ok(ContractResult::from(to_binary(&PairInfoRaw {
-                        contract_addr: api
-                            .addr_canonicalize(pair_info.contract_addr.as_str())
-                            .unwrap(),
-                        liquidity_token: api
-                            .addr_canonicalize(pair_info.liquidity_token.as_str())
-                            .unwrap(),
-                        asset_infos: [
-                            AssetInfoRaw::NativeToken {
-                                denom: "uusd".to_string(),
-                            },
-                            AssetInfoRaw::NativeToken {
-                                denom: "uusd".to_string(),
-                            },
-                        ],
-                        asset_decimals: [6u8, 6u8],
-                    })))
-                } else {
-                    panic!("DO NOT ENTER HERE")
-                }
-            }
             _ => self.base.handle_query(request),
         }
     }
 }
 
 impl WasmMockQuerier {
-    pub fn new(base: MockQuerier<Empty>) -> Self {
+    pub fn new(base: MockQuerier) -> Self {
         WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),
@@ -289,5 +251,107 @@ impl WasmMockQuerier {
         for (addr, balance) in balances {
             self.base.update_balance(addr.to_string(), balance.clone());
         }
+    }
+}
+
+#[cfg(test)]
+mod mock_exception {
+    use cosmwasm_std::Binary;
+
+    use super::*;
+
+    #[test]
+    fn raw_query_err() {
+        let deps = mock_dependencies(&[]);
+        assert_eq!(
+            deps.querier.raw_query(&[]),
+            SystemResult::Err(SystemError::InvalidRequest {
+                error: "Parsing query request: Error parsing into type cosmwasm_std::query::QueryRequest<cosmwasm_std::results::empty::Empty>: EOF while parsing a JSON value.".to_string(),
+                request: Binary(vec![])
+            })
+        );
+    }
+
+    #[test]
+    fn none_factory_pair_will_err() {
+        let deps = mock_dependencies(&[]);
+
+        let msg = to_binary(&FactoryQueryMsg::Pair {
+            asset_infos: [
+                AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: "ulunc".to_string(),
+                },
+            ],
+        })
+        .unwrap();
+        assert_eq!(
+            deps.querier
+                .handle_query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: "contract0000".to_string(),
+                    msg: msg.clone()
+                })),
+            SystemResult::Err(SystemError::InvalidRequest {
+                error: "No pair info exists".to_string(),
+                request: msg
+            })
+        )
+    }
+
+    #[test]
+    fn none_tokens_info_will_err() {
+        let deps = mock_dependencies(&[]);
+
+        let msg = to_binary(&Cw20QueryMsg::TokenInfo {}).unwrap();
+
+        assert_eq!(
+            deps.querier
+                .handle_query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: "token0000".to_string(),
+                    msg: msg.clone()
+                })),
+            SystemResult::Err(SystemError::InvalidRequest {
+                error: "No balance info exists for the contract token0000".to_string(),
+                request: msg
+            })
+        )
+    }
+
+    #[test]
+    fn none_tokens_balance_will_err() {
+        let deps = mock_dependencies(&[]);
+
+        let msg = to_binary(&Cw20QueryMsg::Balance {
+            address: "address0000".to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(
+            deps.querier
+                .handle_query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: "token0000".to_string(),
+                    msg: msg.clone()
+                })),
+            SystemResult::Err(SystemError::InvalidRequest {
+                error: "No balance info exists for the contract token0000".to_string(),
+                request: msg
+            })
+        )
+    }
+
+    #[test]
+    #[should_panic]
+    fn none_tokens_minter_will_panic() {
+        let deps = mock_dependencies(&[]);
+
+        let msg = to_binary(&Cw20QueryMsg::Minter {}).unwrap();
+
+        deps.querier
+            .handle_query(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: "token0000".to_string(),
+                msg,
+            }));
     }
 }

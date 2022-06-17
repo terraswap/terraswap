@@ -1,11 +1,14 @@
-use crate::asset::{Asset, AssetInfo, PairInfo};
+use crate::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo};
 use crate::mock_querier::mock_dependencies;
 use crate::querier::{
     query_all_balances, query_balance, query_pair_info, query_token_balance, query_token_info,
 };
 
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Uint128, WasmMsg};
+use cosmwasm_std::{
+    coin, to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, StdError, SubMsg, Uint128,
+    WasmMsg,
+};
 use cw20::Cw20ExecuteMsg;
 
 #[test]
@@ -186,7 +189,10 @@ fn test_asset() {
     };
 
     assert_eq!(
-        token_asset.into_msg(Addr::unchecked("addr0000")).unwrap(),
+        token_asset
+            .clone()
+            .into_msg(Addr::unchecked("addr0000"))
+            .unwrap(),
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -196,6 +202,21 @@ fn test_asset() {
             .unwrap(),
             funds: vec![],
         })
+    );
+
+    assert_eq!(
+        token_asset
+            .into_submsg(Addr::unchecked("addr0000"))
+            .unwrap(),
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "asset0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "addr0000".to_string(),
+                amount: Uint128::from(123123u128),
+            })
+            .unwrap(),
+            funds: vec![],
+        }))
     );
 
     assert_eq!(
@@ -210,6 +231,148 @@ fn test_asset() {
             }]
         })
     );
+}
+
+#[test]
+fn test_assert_sent_native_token_balance() {
+    // zero asset
+    let message_info = MessageInfo {
+        funds: vec![],
+        sender: Addr::unchecked("addr0000"),
+    };
+
+    let zero_asset = Asset {
+        amount: Uint128::zero(),
+        info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+    };
+
+    assert_eq!(
+        zero_asset.assert_sent_native_token_balance(&message_info),
+        Ok(())
+    );
+
+    // invalid message_info
+    let message_info = MessageInfo {
+        funds: vec![coin(123, "uluna")],
+        sender: Addr::unchecked("addr0000"),
+    };
+
+    let invalid_amount_asset = Asset {
+        amount: Uint128::from(1u8),
+        info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+    };
+
+    assert_eq!(
+        invalid_amount_asset.assert_sent_native_token_balance(&message_info),
+        Err(StdError::generic_err(
+            "Native token balance mismatch between the argument and the transferred"
+        ))
+    );
+
+    let invalid_amount_asset = Asset {
+        amount: Uint128::from(1u8),
+        info: AssetInfo::NativeToken {
+            denom: "ulunc".to_string(),
+        },
+    };
+
+    assert_eq!(
+        invalid_amount_asset.assert_sent_native_token_balance(&message_info),
+        Err(StdError::generic_err(
+            "Native token balance mismatch between the argument and the transferred"
+        ))
+    )
+}
+
+#[test]
+fn test_asset_to_raw() {
+    let deps = mock_dependencies(&[]);
+    let native_asset = Asset {
+        amount: Uint128::from(1u128),
+        info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+    };
+
+    let native_asset_to_raw = native_asset.to_raw(&deps.api).unwrap();
+
+    assert_eq!(
+        native_asset_to_raw,
+        AssetRaw {
+            amount: Uint128::from(1u128),
+            info: AssetInfoRaw::NativeToken {
+                denom: "uluna".to_string()
+            }
+        }
+    );
+
+    assert_eq!(
+        native_asset_to_raw.to_normal(&deps.api).unwrap(),
+        native_asset
+    );
+
+    let token_asset = Asset {
+        amount: Uint128::from(1u128),
+        info: AssetInfo::Token {
+            contract_addr: "contract0000".to_string(),
+        },
+    };
+
+    let token_asset_to_raw = token_asset.to_raw(&deps.api).unwrap();
+
+    assert_eq!(
+        token_asset_to_raw,
+        AssetRaw {
+            amount: Uint128::from(1u128),
+            info: AssetInfoRaw::Token {
+                contract_addr: deps.api.addr_canonicalize("contract0000").unwrap()
+            }
+        }
+    );
+
+    assert_eq!(
+        token_asset_to_raw.to_normal(&deps.api).unwrap(),
+        token_asset
+    )
+}
+
+#[test]
+fn test_asset_info_raw_equal() {
+    let native_asset_info_raw = AssetInfoRaw::NativeToken {
+        denom: "uluna".to_string(),
+    };
+
+    assert!(native_asset_info_raw.equal(&AssetInfoRaw::NativeToken {
+        denom: "uluna".to_string()
+    }));
+
+    assert!(!native_asset_info_raw.equal(&AssetInfoRaw::NativeToken {
+        denom: "ulunc".to_string()
+    }));
+
+    let deps = mock_dependencies(&[]);
+    assert!(!native_asset_info_raw.equal(&AssetInfoRaw::Token {
+        contract_addr: deps.api.addr_canonicalize("contract0000").unwrap()
+    }));
+
+    let token_asset_info_raw = AssetInfoRaw::Token {
+        contract_addr: deps.api.addr_canonicalize("contract0000").unwrap(),
+    };
+    assert!(token_asset_info_raw.equal(&AssetInfoRaw::Token {
+        contract_addr: deps.api.addr_canonicalize("contract0000").unwrap()
+    }));
+
+    assert!(!token_asset_info_raw.equal(&AssetInfoRaw::Token {
+        contract_addr: deps.api.addr_canonicalize("contract000").unwrap()
+    }));
+
+    assert!(!token_asset_info_raw.equal(&AssetInfoRaw::NativeToken {
+        denom: "uluna".to_string()
+    }));
 }
 
 #[test]
