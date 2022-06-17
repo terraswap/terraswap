@@ -379,22 +379,25 @@ fn test_asset_info_raw_equal() {
 fn query_terraswap_pair_contract() {
     let mut deps = mock_dependencies(&[]);
 
-    deps.querier.with_terraswap_pairs(&[(
-        &"asset0000uusd".to_string(),
-        &PairInfo {
-            asset_infos: [
-                AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-            ],
-            contract_addr: "pair0000".to_string(),
-            liquidity_token: "liquidity0000".to_string(),
-            asset_decimals: [6u8, 6u8],
-        },
-    )]);
+    deps.querier.with_terraswap_factory(
+        &[(
+            &"asset0000uusd".to_string(),
+            &PairInfo {
+                asset_infos: [
+                    AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                ],
+                contract_addr: "pair0000".to_string(),
+                liquidity_token: "liquidity0000".to_string(),
+                asset_decimals: [6u8, 6u8],
+            },
+        )],
+        &[("uusd".to_string(), 6u8)],
+    );
 
     let pair_info: PairInfo = query_pair_info(
         &deps.as_ref().querier,

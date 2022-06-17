@@ -269,22 +269,25 @@ fn execute_swap_operation() {
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    deps.querier.with_terraswap_pairs(&[(
-        &"uusdasset0000".to_string(),
-        &PairInfo {
-            asset_infos: [
-                AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-                AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-            ],
-            contract_addr: "pair0000".to_string(),
-            liquidity_token: "liquidity0000".to_string(),
-            asset_decimals: [6u8, 6u8],
-        },
-    )]);
+    deps.querier.with_terraswap_factory(
+        &[(
+            &"uusdasset0000".to_string(),
+            &PairInfo {
+                asset_infos: [
+                    AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                ],
+                contract_addr: "pair0000".to_string(),
+                liquidity_token: "liquidity0000".to_string(),
+                asset_decimals: [6u8, 6u8],
+            },
+        )],
+        &[("uusd".to_string(), 6u8)],
+    );
     deps.querier.with_balance(&[(
         &MOCK_CONTRACT_ADDR.to_string(),
         [Coin {
@@ -366,22 +369,25 @@ fn execute_swap_operation() {
             .unwrap()
         )],
     );
-    deps.querier.with_terraswap_pairs(&[(
-        &"assetuusd".to_string(),
-        &PairInfo {
-            asset_infos: [
-                AssetInfo::Token {
-                    contract_addr: "asset".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-            ],
-            contract_addr: "pair0000".to_string(),
-            liquidity_token: "liquidity0000".to_string(),
-            asset_decimals: [6u8, 6u8],
-        },
-    )]);
+    deps.querier.with_terraswap_factory(
+        &[(
+            &"assetuusd".to_string(),
+            &PairInfo {
+                asset_infos: [
+                    AssetInfo::Token {
+                        contract_addr: "asset".to_string(),
+                    },
+                    AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                ],
+                contract_addr: "pair0000".to_string(),
+                liquidity_token: "liquidity0000".to_string(),
+                asset_decimals: [6u8, 6u8],
+            },
+        )],
+        &[("uusd".to_string(), 6u8)],
+    );
     deps.querier.with_token_balances(&[(
         &"asset".to_string(),
         &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(1000000u128))],
@@ -462,40 +468,43 @@ fn query_buy_with_routes() {
         ],
     };
 
-    deps.querier.with_terraswap_pairs(&[
-        (
-            &"ukrwasset0000".to_string(),
-            &PairInfo {
-                asset_infos: [
-                    AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                    AssetInfo::Token {
-                        contract_addr: "asset0000".to_string(),
-                    },
-                ],
-                contract_addr: "pair0000".to_string(),
-                liquidity_token: "liquidity0000".to_string(),
-                asset_decimals: [6u8, 6u8],
-            },
-        ),
-        (
-            &"asset0000uluna".to_string(),
-            &PairInfo {
-                asset_infos: [
-                    AssetInfo::Token {
-                        contract_addr: "asset0000".to_string(),
-                    },
-                    AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                ],
-                contract_addr: "pair0001".to_string(),
-                liquidity_token: "liquidity0001".to_string(),
-                asset_decimals: [6u8, 6u8],
-            },
-        ),
-    ]);
+    deps.querier.with_terraswap_factory(
+        &[
+            (
+                &"ukrwasset0000".to_string(),
+                &PairInfo {
+                    asset_infos: [
+                        AssetInfo::NativeToken {
+                            denom: "ukrw".to_string(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                    ],
+                    contract_addr: "pair0000".to_string(),
+                    liquidity_token: "liquidity0000".to_string(),
+                    asset_decimals: [6u8, 6u8],
+                },
+            ),
+            (
+                &"asset0000uluna".to_string(),
+                &PairInfo {
+                    asset_infos: [
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: "uluna".to_string(),
+                        },
+                    ],
+                    contract_addr: "pair0001".to_string(),
+                    liquidity_token: "liquidity0001".to_string(),
+                    asset_decimals: [6u8, 6u8],
+                },
+            ),
+        ],
+        &[("ukrw".to_string(), 6u8), ("uluna".to_string(), 6u8)],
+    );
 
     let res: SimulateSwapOperationsResponse =
         from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
@@ -548,40 +557,43 @@ fn query_reverse_routes_with_from_native() {
         }],
     };
 
-    deps.querier.with_terraswap_pairs(&[
-        (
-            &"ukrwasset0000".to_string(),
-            &PairInfo {
-                contract_addr: "pair0000".to_string(),
-                liquidity_token: "liquidity0000".to_string(),
-                asset_infos: [
-                    AssetInfo::Token {
-                        contract_addr: "asset0000".to_string(),
-                    },
-                    AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                ],
-                asset_decimals: [8u8, 6u8],
-            },
-        ),
-        (
-            &"asset0000uluna".to_string(),
-            &PairInfo {
-                contract_addr: "pair0001".to_string(),
-                liquidity_token: "liquidity0001".to_string(),
-                asset_infos: [
-                    AssetInfo::Token {
-                        contract_addr: "asset0000".to_string(),
-                    },
-                    AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                ],
-                asset_decimals: [8u8, 6u8],
-            },
-        ),
-    ]);
+    deps.querier.with_terraswap_factory(
+        &[
+            (
+                &"ukrwasset0000".to_string(),
+                &PairInfo {
+                    contract_addr: "pair0000".to_string(),
+                    liquidity_token: "liquidity0000".to_string(),
+                    asset_infos: [
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: "ukrw".to_string(),
+                        },
+                    ],
+                    asset_decimals: [8u8, 6u8],
+                },
+            ),
+            (
+                &"asset0000uluna".to_string(),
+                &PairInfo {
+                    contract_addr: "pair0001".to_string(),
+                    liquidity_token: "liquidity0001".to_string(),
+                    asset_infos: [
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: "uluna".to_string(),
+                        },
+                    ],
+                    asset_decimals: [8u8, 6u8],
+                },
+            ),
+        ],
+        &[("ukrw".to_string(), 6u8), ("uluna".to_string(), 6u8)],
+    );
 
     let res: SimulateSwapOperationsResponse =
         from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
@@ -675,40 +687,43 @@ fn query_reverse_routes_with_to_native() {
         }],
     };
 
-    deps.querier.with_terraswap_pairs(&[
-        (
-            &"ukrwasset0000".to_string(),
-            &PairInfo {
-                contract_addr: "pair0000".to_string(),
-                liquidity_token: "liquidity0000".to_string(),
-                asset_infos: [
-                    AssetInfo::Token {
-                        contract_addr: "asset0000".to_string(),
-                    },
-                    AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                ],
-                asset_decimals: [8u8, 6u8],
-            },
-        ),
-        (
-            &"asset0000uluna".to_string(),
-            &PairInfo {
-                contract_addr: "pair0001".to_string(),
-                liquidity_token: "liquidity0001".to_string(),
-                asset_infos: [
-                    AssetInfo::Token {
-                        contract_addr: "asset0000".to_string(),
-                    },
-                    AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                ],
-                asset_decimals: [8u8, 6u8],
-            },
-        ),
-    ]);
+    deps.querier.with_terraswap_factory(
+        &[
+            (
+                &"ukrwasset0000".to_string(),
+                &PairInfo {
+                    contract_addr: "pair0000".to_string(),
+                    liquidity_token: "liquidity0000".to_string(),
+                    asset_infos: [
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: "ukrw".to_string(),
+                        },
+                    ],
+                    asset_decimals: [8u8, 6u8],
+                },
+            ),
+            (
+                &"asset0000uluna".to_string(),
+                &PairInfo {
+                    contract_addr: "pair0001".to_string(),
+                    liquidity_token: "liquidity0001".to_string(),
+                    asset_infos: [
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: "uluna".to_string(),
+                        },
+                    ],
+                    asset_decimals: [8u8, 6u8],
+                },
+            ),
+        ],
+        &[("ukrw".to_string(), 6u8), ("uluna".to_string(), 6u8)],
+    );
 
     let res: SimulateSwapOperationsResponse =
         from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();

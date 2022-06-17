@@ -65,6 +65,32 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "add_native_token_decimals"
+      ],
+      "properties": {
+        "add_native_token_decimals": {
+          "type": "object",
+          "required": [
+            "decimals",
+            "denom"
+          ],
+          "properties": {
+            "decimals": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0.0
+            },
+            "denom": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {

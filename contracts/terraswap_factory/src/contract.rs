@@ -4,15 +4,19 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
     StdError, StdResult, SubMsg, WasmMsg,
 };
-use terraswap::querier::query_pair_info_from_pair;
+use terraswap::querier::{query_balance, query_pair_info_from_pair};
 
 use crate::response::MsgInstantiateContractResponse;
-use crate::state::{pair_key, read_pairs, Config, TmpPairInfo, CONFIG, PAIRS, TMP_PAIR_INFO};
+use crate::state::{
+    add_allow_native_token, pair_key, read_pairs, Config, TmpPairInfo, ALLOW_NATIVE_TOKENS, CONFIG,
+    PAIRS, TMP_PAIR_INFO,
+};
 
 use protobuf::Message;
 use terraswap::asset::{AssetInfo, PairInfo, PairInfoRaw};
 use terraswap::factory::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, PairsResponse, QueryMsg,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse,
+    PairsResponse, QueryMsg,
 };
 use terraswap::pair::InstantiateMsg as PairInstantiateMsg;
 
@@ -43,6 +47,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             pair_code_id,
         } => execute_update_config(deps, env, info, owner, token_code_id, pair_code_id),
         ExecuteMsg::CreatePair { asset_infos } => execute_create_pair(deps, env, info, asset_infos),
+        ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
+            execute_add_native_token_decimals(deps, env, info, denom, decimals)
+        }
     }
 }
 
@@ -151,6 +158,36 @@ pub fn execute_create_pair(
         }))
 }
 
+pub fn execute_add_native_token_decimals(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    denom: String,
+    decimals: u8,
+) -> StdResult<Response> {
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    // permission check
+    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    let balance = query_balance(&deps.querier, env.contract.address, denom.to_string())?;
+    if balance.is_zero() {
+        return Err(StdError::generic_err(
+            "a balance greater than zero is required by the factory for verification",
+        ));
+    }
+
+    add_allow_native_token(deps.storage, denom.to_string(), decimals)?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "add_allow_native_token"),
+        ("denom", &denom),
+        ("decimals", &decimals.to_string()),
+    ]))
+}
+
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
@@ -188,6 +225,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Pair { asset_infos } => to_binary(&query_pair(deps, asset_infos)?),
         QueryMsg::Pairs { start_after, limit } => {
             to_binary(&query_pairs(deps, start_after, limit)?)
+        }
+        QueryMsg::NativeTokenDecimals { denom } => {
+            to_binary(&query_native_token_decimal(deps, denom)?)
         }
     }
 }
@@ -230,6 +270,15 @@ pub fn query_pairs(
     let resp = PairsResponse { pairs };
 
     Ok(resp)
+}
+
+pub fn query_native_token_decimal(
+    deps: Deps,
+    denom: String,
+) -> StdResult<NativeTokenDecimalsResponse> {
+    let decimals = ALLOW_NATIVE_TOKENS.load(deps.storage, denom.as_bytes())?;
+
+    Ok(NativeTokenDecimalsResponse { decimals })
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
