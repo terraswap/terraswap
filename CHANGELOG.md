@@ -1,3 +1,7 @@
+# 2.7.0
+
+* [4e3e80e](https://github.com/terraswap/terraswap/pull/52/commits/4e3e80ea04b44e0396f8d03c306adf096a864573) Add native token decimals
+
 # 2.6.2
 
 * [5337ee7](https://github.com/terraswap/terraswap/pull/51/commits/5337ee7b54833346d7d50820b9f7236786c8329c) Clean up generic
