@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 use std::panic;
 
 use crate::asset::{AssetInfo, PairInfo};
-use crate::factory::QueryMsg as FactoryQueryMsg;
+use crate::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
 use crate::pair::QueryMsg as PairQueryMsg;
 use crate::pair::{ReverseSimulationResponse, SimulationResponse};
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
@@ -69,12 +69,14 @@ pub(crate) fn balances_to_map(
 #[derive(Clone, Default)]
 pub struct TerraswapFactoryQuerier {
     pairs: HashMap<String, PairInfo>,
+    native_token_decimals: HashMap<String, u8>,
 }
 
 impl TerraswapFactoryQuerier {
-    pub fn new(pairs: &[(&String, &PairInfo)]) -> Self {
+    pub fn new(pairs: &[(&String, &PairInfo)], native_token_decimals: &[(String, u8)]) -> Self {
         TerraswapFactoryQuerier {
             pairs: pairs_to_map(pairs),
+            native_token_decimals: native_token_decimals_to_map(native_token_decimals),
         }
     }
 }
@@ -87,6 +89,17 @@ pub(crate) fn pairs_to_map(pairs: &[(&String, &PairInfo)]) -> HashMap<String, Pa
         pairs_map.insert(String::from_iter(sort_key.iter()), (**pair).clone());
     }
     pairs_map
+}
+
+pub(crate) fn native_token_decimals_to_map(
+    native_token_decimals: &[(String, u8)],
+) -> HashMap<String, u8> {
+    let mut native_token_decimals_map: HashMap<String, u8> = HashMap::new();
+
+    for (denom, decimals) in native_token_decimals.iter() {
+        native_token_decimals_map.insert(denom.to_string(), *decimals);
+    }
+    native_token_decimals_map
 }
 
 impl Querier for WasmMockQuerier {
@@ -121,6 +134,24 @@ impl WasmMockQuerier {
                         Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(v).unwrap())),
                         None => SystemResult::Err(SystemError::InvalidRequest {
                             error: "No pair info exists".to_string(),
+                            request: msg.as_slice().into(),
+                        }),
+                    }
+                }
+                Ok(FactoryQueryMsg::NativeTokenDecimals { denom }) => {
+                    match self
+                        .terraswap_factory_querier
+                        .native_token_decimals
+                        .get(&denom)
+                    {
+                        Some(decimals) => SystemResult::Ok(ContractResult::Ok(
+                            to_binary(&NativeTokenDecimalsResponse {
+                                decimals: *decimals,
+                            })
+                            .unwrap(),
+                        )),
+                        None => SystemResult::Err(SystemError::InvalidRequest {
+                            error: "No decimal info exist".to_string(),
                             request: msg.as_slice().into(),
                         }),
                     }
@@ -243,8 +274,12 @@ impl WasmMockQuerier {
     }
 
     // configure the terraswap pair
-    pub fn with_terraswap_pairs(&mut self, pairs: &[(&String, &PairInfo)]) {
-        self.terraswap_factory_querier = TerraswapFactoryQuerier::new(pairs);
+    pub fn with_terraswap_factory(
+        &mut self,
+        pairs: &[(&String, &PairInfo)],
+        native_token_decimals: &[(String, u8)],
+    ) {
+        self.terraswap_factory_querier = TerraswapFactoryQuerier::new(pairs, native_token_decimals);
     }
 
     pub fn with_balance(&mut self, balances: &[(&String, Vec<Coin>)]) {

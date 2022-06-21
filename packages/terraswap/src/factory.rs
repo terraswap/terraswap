@@ -24,6 +24,10 @@ pub enum ExecuteMsg {
         /// Asset infos
         asset_infos: [AssetInfo; 2],
     },
+    AddNativeTokenDecimals {
+        denom: String,
+        decimals: u8,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -36,6 +40,9 @@ pub enum QueryMsg {
     Pairs {
         start_after: Option<[AssetInfo; 2]>,
         limit: Option<u32>,
+    },
+    NativeTokenDecimals {
+        denom: String,
     },
 }
 
@@ -55,4 +62,9 @@ pub struct MigrateMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PairsResponse {
     pub pairs: Vec<PairInfo>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct NativeTokenDecimalsResponse {
+    pub decimals: u8,
 }

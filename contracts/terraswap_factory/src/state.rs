@@ -67,3 +67,60 @@ fn calc_range_start(start_after: Option<[AssetInfoRaw; 2]>) -> Option<Vec<u8>> {
         v
     })
 }
+
+// key : asset info / value: decimals
+pub const ALLOW_NATIVE_TOKENS: Map<&[u8], u8> = Map::new("allow_native_token");
+pub fn add_allow_native_token(
+    storage: &mut dyn Storage,
+    denom: String,
+    decimals: u8,
+) -> StdResult<()> {
+    ALLOW_NATIVE_TOKENS.save(storage, denom.as_bytes(), &decimals)
+}
+
+#[cfg(test)]
+mod allow_native_token {
+
+    use terraswap::mock_querier::mock_dependencies;
+
+    use super::*;
+
+    #[test]
+    fn normal() {
+        let mut deps = mock_dependencies(&[]);
+        let denom = "uluna".to_string();
+        let decimals = 6u8;
+
+        add_allow_native_token(deps.as_mut().storage, denom.to_string(), decimals).unwrap();
+
+        assert_eq!(
+            decimals,
+            ALLOW_NATIVE_TOKENS
+                .load(deps.as_ref().storage, denom.as_bytes())
+                .unwrap()
+        )
+    }
+
+    #[test]
+    fn duplicate_register_will_append() {
+        let mut deps = mock_dependencies(&[]);
+        let denom = "uluna".to_string();
+
+        add_allow_native_token(deps.as_mut().storage, denom.to_string(), 6u8).unwrap();
+
+        assert_eq!(
+            ALLOW_NATIVE_TOKENS
+                .load(deps.as_ref().storage, denom.as_bytes())
+                .unwrap(),
+            6u8
+        );
+
+        add_allow_native_token(deps.as_mut().storage, denom.to_string(), 7u8).unwrap();
+        assert_eq!(
+            ALLOW_NATIVE_TOKENS
+                .load(deps.as_ref().storage, denom.as_bytes())
+                .unwrap(),
+            7u8
+        );
+    }
+}

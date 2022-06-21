@@ -76,6 +76,18 @@ pub fn query_token_info(
 ) -> StdResult<TokenInfoResponse>
 ```
 
+### Native Token Deimals Querier
+
+It provides native token decimals querier for factory contract.
+
+```rust
+pub fn query_native_decimals(
+    querier: &QuerierWrapper,
+    factory_contract: Addr,
+    denom: String,
+) -> StdResult<u8>
+```
+
 ### Pair Info Querier From Factory
 
 It also provides the query interface to query avaliable terraswap pair contract info. Any contract can query pair info to terraswap factory contract.

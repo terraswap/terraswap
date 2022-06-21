@@ -7,11 +7,13 @@ use cosmwasm_std::testing::{
     mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
 };
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, OwnedDeps, Reply, ReplyOn, StdError, SubMsg,
+    attr, coin, from_binary, to_binary, OwnedDeps, Reply, ReplyOn, Response, StdError, SubMsg,
     SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use terraswap::asset::{AssetInfo, PairInfo};
-use terraswap::factory::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use terraswap::factory::{
+    ConfigResponse, ExecuteMsg, InstantiateMsg, NativeTokenDecimalsResponse, QueryMsg,
+};
 use terraswap::pair::InstantiateMsg as PairInstantiateMsg;
 
 #[test]
@@ -127,7 +129,8 @@ fn init(
 fn create_pair() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
-
+    deps.querier
+        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -195,6 +198,10 @@ fn create_pair_native_token_and_ibc_token() {
         coin(10u128, "ibc/HASH".to_string()),
     ]);
     deps = init(deps);
+    deps.querier.with_terraswap_factory(
+        &[],
+        &[("uusd".to_string(), 6u8), ("ibc/HASH".to_string(), 6u8)],
+    );
 
     let asset_infos = [
         AssetInfo::NativeToken {
@@ -425,22 +432,25 @@ fn reply_test() {
     };
 
     // register terraswap pair querier
-    deps.querier.with_terraswap_pairs(&[(
-        &"0000".to_string(),
-        &PairInfo {
-            asset_infos: [
-                AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-                AssetInfo::Token {
-                    contract_addr: "asset0001".to_string(),
-                },
-            ],
-            contract_addr: "0000".to_string(),
-            liquidity_token: "liquidity0000".to_string(),
-            asset_decimals: [8u8, 8u8],
-        },
-    )]);
+    deps.querier.with_terraswap_factory(
+        &[(
+            &"0000".to_string(),
+            &PairInfo {
+                asset_infos: [
+                    AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    AssetInfo::Token {
+                        contract_addr: "asset0001".to_string(),
+                    },
+                ],
+                contract_addr: "0000".to_string(),
+                liquidity_token: "liquidity0000".to_string(),
+                asset_decimals: [8u8, 8u8],
+            },
+        )],
+        &[],
+    );
 
     let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
@@ -463,4 +473,120 @@ fn reply_test() {
             asset_decimals: [8u8, 8u8]
         }
     );
+}
+
+#[test]
+fn normal_add_allow_native_token() {
+    let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::AddNativeTokenDecimals {
+        denom: "uluna".to_string(),
+        decimals: 6u8,
+    };
+
+    let info = mock_info("addr0000", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap(),
+        Response::new().add_attributes(vec![
+            ("action", "add_allow_native_token"),
+            ("denom", "uluna"),
+            ("decimals", "6"),
+        ])
+    );
+
+    let res = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::NativeTokenDecimals {
+            denom: "uluna".to_string(),
+        },
+    )
+    .unwrap();
+    let res: NativeTokenDecimalsResponse = from_binary(&res).unwrap();
+    assert_eq!(6u8, res.decimals)
+}
+
+#[test]
+fn failed_add_allow_native_token_with_non_admin() {
+    let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::AddNativeTokenDecimals {
+        denom: "uluna".to_string(),
+        decimals: 6u8,
+    };
+
+    let info = mock_info("noadmin", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg),
+        Err(StdError::generic_err("unauthorized"))
+    );
+}
+
+#[test]
+fn failed_add_allow_native_token_with_zero_factory_balance() {
+    let mut deps = mock_dependencies(&[coin(0u128, "uluna".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::AddNativeTokenDecimals {
+        denom: "uluna".to_string(),
+        decimals: 6u8,
+    };
+
+    let info = mock_info("addr0000", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg),
+        Err(StdError::generic_err(
+            "a balance greater than zero is required by the factory for verification",
+        ))
+    );
+}
+
+#[test]
+fn append_add_allow_native_token_with_already_exist_token() {
+    let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::AddNativeTokenDecimals {
+        denom: "uluna".to_string(),
+
+        decimals: 6u8,
+    };
+
+    let info = mock_info("addr0000", &[]);
+
+    execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+    let res = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::NativeTokenDecimals {
+            denom: "uluna".to_string(),
+        },
+    )
+    .unwrap();
+    let res: NativeTokenDecimalsResponse = from_binary(&res).unwrap();
+    assert_eq!(6u8, res.decimals);
+
+    let msg = ExecuteMsg::AddNativeTokenDecimals {
+        denom: "uluna".to_string(),
+        decimals: 7u8,
+    };
+
+    execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    let res = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::NativeTokenDecimals {
+            denom: "uluna".to_string(),
+        },
+    )
+    .unwrap();
+    let res: NativeTokenDecimalsResponse = from_binary(&res).unwrap();
+    assert_eq!(7u8, res.decimals)
 }
