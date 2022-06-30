@@ -36,7 +36,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 [dependencies]
 cw20 = { version = "0.13.2" } 
 cosmwasm-std = { version = "1.0.0" }
-terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.7.0"}
+terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.8.0"}
 cw-storage-plus = { version = "0.13.2"}
 integer-sqrt = "0.1.5"
 schemars = "0.8.10"

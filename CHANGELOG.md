@@ -1,3 +1,7 @@
+# 2.8.0
+
+* [9ac5067](https://github.com/terraswap/terraswap/pull/55/commits/9ac50670e8bd20e00950e00b66a687e0a9d4fef9) Support to migrate pair
+
 # 2.7.0
 
 * [4e3e80e](https://github.com/terraswap/terraswap/pull/52/commits/4e3e80ea04b44e0396f8d03c306adf096a864573) Add native token decimals
