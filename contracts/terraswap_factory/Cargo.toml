@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-factory"
-version = "0.0.0"
+version = "0.1.0"
 authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
 edition = "2018"
 description = "A Terraswap factory contract - auto pair contract generator and also directory for all pairs"
@@ -34,13 +34,14 @@ overflow-checks = true
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.7.0"}
+terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.8.0"}
 cosmwasm-std = { version = "1.0.0" }
-cw-storage-plus = { version = "0.13.2" } 
+cw-storage-plus = { version = "0.13.4" } 
+cw2 = { version = "0.13.4" } 
 schemars = "0.8.10"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 protobuf = { version = "2", features = ["with-bytes"] }
-cw20 = { version = "0.11.0" }
+cw20 = { version = "0.13.4" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0" }

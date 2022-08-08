@@ -11,6 +11,7 @@ use cosmwasm_std::{
 };
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
+use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
@@ -24,6 +25,10 @@ use terraswap::pair::{
 use terraswap::querier::query_token_info;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 
+// version info for migration info
+const CONTRACT_NAME: &str = "crates.io:terraswap-pair";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
 /// Commission rate == 0.3%
@@ -35,6 +40,8 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     let pair_info: &PairInfoRaw = &PairInfoRaw {
         contract_addr: deps.api.addr_canonicalize(env.contract.address.as_str())?,
         liquidity_token: CanonicalAddr::from(vec![]),
@@ -729,6 +736,8 @@ fn assert_slippage_tolerance(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     Ok(Response::default())
 }

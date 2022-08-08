@@ -28,6 +28,10 @@ pub enum ExecuteMsg {
         denom: String,
         decimals: u8,
     },
+    MigratePair {
+        contract: String,
+        code_id: Option<u64>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

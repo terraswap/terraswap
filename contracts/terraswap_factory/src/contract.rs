@@ -4,6 +4,7 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
     StdError, StdResult, SubMsg, WasmMsg,
 };
+use cw2::set_contract_version;
 use terraswap::querier::{query_balance, query_pair_info_from_pair};
 
 use crate::response::MsgInstantiateContractResponse;
@@ -18,7 +19,11 @@ use terraswap::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse,
     PairsResponse, QueryMsg,
 };
-use terraswap::pair::InstantiateMsg as PairInstantiateMsg;
+use terraswap::pair::{InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg};
+
+// version info for migration info
+const CONTRACT_NAME: &str = "crates.io:terraswap-factory";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -27,6 +32,8 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     let config = Config {
         owner: deps.api.addr_canonicalize(info.sender.as_str())?,
         token_code_id: msg.token_code_id,
@@ -49,6 +56,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::CreatePair { asset_infos } => execute_create_pair(deps, env, info, asset_infos),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
             execute_add_native_token_decimals(deps, env, info, denom, decimals)
+        }
+        ExecuteMsg::MigratePair { contract, code_id } => {
+            execute_migrate_pair(deps, env, info, contract, code_id)
         }
     }
 }
@@ -188,6 +198,31 @@ pub fn execute_add_native_token_decimals(
     ]))
 }
 
+pub fn execute_migrate_pair(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    contract: String,
+    code_id: Option<u64>,
+) -> StdResult<Response> {
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    // permission check
+    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    let code_id = code_id.unwrap_or(config.pair_code_id);
+
+    Ok(
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: contract,
+            new_code_id: code_id,
+            msg: to_binary(&PairMigrateMsg {})?,
+        })),
+    )
+}
+
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
@@ -282,6 +317,8 @@ pub fn query_native_token_decimal(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     Ok(Response::default())
 }

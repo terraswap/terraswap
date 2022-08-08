@@ -200,9 +200,9 @@ dependencies = [
 
 [[package]]
 name = "cw-storage-plus"
-version = "0.13.2"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9336ecef1e19d56cf6e3e932475fc6a3dee35eec5a386e07917a1d1ba6bb0e35"
+checksum = "648b1507290bbc03a8d88463d7cd9b04b1fa0155e5eef366c4fa052b9caaac7a"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -211,21 +211,9 @@ dependencies = [
 
 [[package]]
 name = "cw-utils"
-version = "0.11.1"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef842a1792e4285beff7b3b518705f760fa4111dc1e296e53f3e92d1ef7f6220"
-dependencies = [
- "cosmwasm-std",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "cw-utils"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "babd2c090f39d07ce5bf2556962305e795daa048ce20a93709eb591476e4a29e"
+checksum = "9dbaecb78c8e8abfd6b4258c7f4fbeb5c49a5e45ee4d910d3240ee8e1d714e1b"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -247,9 +235,9 @@ dependencies = [
 
 [[package]]
 name = "cw2"
-version = "0.13.2"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "993df11574f29574dd443eb0c189484bb91bc0638b6de3e32ab7f9319c92122d"
+checksum = "04cf4639517490dd36b333bbd6c4fbd92e325fd0acf4683b41753bc5eb63bfc1"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus",
@@ -259,24 +247,12 @@ dependencies = [
 
 [[package]]
 name = "cw20"
-version = "0.11.1"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9671d7edef5608acaf5b2f1e473ee3f501eced2cd4f7392e2106c8cf02ba0720"
+checksum = "4cb782b8f110819a4eb5dbbcfed25ffba49ec16bbe32b4ad8da50a5ce68fec05"
 dependencies = [
  "cosmwasm-std",
- "cw-utils 0.11.1",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "cw20"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "356d364602c5fe763544ea00d485b825d6ef519a2fc6a3145528d7df3a603f40"
-dependencies = [
- "cosmwasm-std",
- "cw-utils 0.13.2",
+ "cw-utils",
  "schemars",
  "serde",
 ]
@@ -289,9 +265,9 @@ checksum = "3b370e5fb6b35db58cabd7903b8f9bd4c3bcff701c63bf1a7185a84e60bfa502"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus",
- "cw-utils 0.13.2",
+ "cw-utils",
  "cw2",
- "cw20 0.13.2",
+ "cw20",
  "schemars",
  "serde",
  "thiserror",
@@ -709,12 +685,12 @@ dependencies = [
 
 [[package]]
 name = "terraswap"
-version = "2.7.0"
+version = "2.8.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw20 0.13.2",
+ "cw20",
  "protobuf",
  "schemars",
  "serde",
@@ -722,13 +698,14 @@ dependencies = [
 
 [[package]]
 name = "terraswap-factory"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-storage-plus",
- "cw20 0.11.1",
+ "cw2",
+ "cw20",
  "protobuf",
  "schemars",
  "serde",
@@ -737,7 +714,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-pair"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-schema",
@@ -745,7 +722,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-storage-plus",
  "cw2",
- "cw20 0.13.2",
+ "cw20",
  "integer-sqrt",
  "protobuf",
  "schemars",
@@ -762,7 +739,8 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-storage-plus",
- "cw20 0.13.2",
+ "cw2",
+ "cw20",
  "integer-sqrt",
  "schemars",
  "serde",
@@ -779,7 +757,7 @@ dependencies = [
  "cw-storage-plus",
  "cw0",
  "cw2",
- "cw20 0.13.2",
+ "cw20",
  "cw20-base",
  "schemars",
  "serde",
