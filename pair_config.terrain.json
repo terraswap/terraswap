@@ -1,0 +1,48 @@
+{
+  "_global": {
+    "_base": {
+      "instantiation": {
+        "instantiateMsg":   {
+          "provide_liquidity": {
+            "assets": [
+              {
+                "info": {
+                  "token": {
+                    "contract_addr": "terra~~"
+                  }
+                },
+                "amount": "1000000"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "uluna"
+                  }
+                },
+                "amount": "1000000"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }, 
+  "mainnet": {
+    "_connection": {
+      "chainID": "phoenix-1",
+      "URL": "https://phoenix-lcd.terra.dev"
+    }
+  },
+  "testnet": {
+    "_connection": {
+      "chainID": "pisco-1",
+      "URL": "https://pisco-lcd.terra.dev"
+    }
+  },
+  "localterra": {
+    "_connection": {
+      "chainID": "localterra",
+      "URL": "http://localhost:1317"
+    }
+  }
+}
