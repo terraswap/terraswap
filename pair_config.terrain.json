@@ -2,12 +2,26 @@
   "_global": {
     "_base": {
       "instantiation": {
-        "instantiateMsg": {
-          "pair_code_id": 123,
-          "token_code_id": 123,
-          "init_hook": {
-            "msg": "123",
-            "contract_addr": "terra1jha5avc92uerwp9qzx3flvwnyxs3zax2rrm6jkcedy2qvzwd2k7qk7yxcl"
+        "instantiateMsg":   {
+          "provide_liquidity": {
+            "assets": [
+              {
+                "info": {
+                  "token": {
+                    "contract_addr": "terra~~"
+                  }
+                },
+                "amount": "1000000"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "uluna"
+                  }
+                },
+                "amount": "1000000"
+              }
+            ]
           }
         }
       }

@@ -19,7 +19,10 @@
       }
     },
     "terraswap_factory": {
-      "codeId": "17"
+      "codeId": "19"
+    },
+    "terraswap_token": {
+      "codeId": "22"
     }
   },
   "testnet": {
@@ -43,6 +46,9 @@
     },
     "terraswap_factory": {
       "codeId": "5624"
+    },
+    "terraswap_token": {
+      "codeId": "5626"
     }
   }
 }

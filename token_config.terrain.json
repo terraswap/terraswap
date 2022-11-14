@@ -3,12 +3,15 @@
     "_base": {
       "instantiation": {
         "instantiateMsg": {
-          "pair_code_id": 123,
-          "token_code_id": 123,
-          "init_hook": {
-            "msg": "123",
-            "contract_addr": "terra1jha5avc92uerwp9qzx3flvwnyxs3zax2rrm6jkcedy2qvzwd2k7qk7yxcl"
-          }
+          "name": "Bit Money",
+          "symbol": "BTM",
+          "decimals": 2,
+          "initial_balances": [
+            {
+              "amount": "123",
+              "address": "terra1x46rqay4d3cssq8gxxvqz8xt6nwlz4td20k38v"
+            }
+          ]
         }
       }
     }
