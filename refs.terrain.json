@@ -1,0 +1,42 @@
+{
+  "localterra": {
+    "counterdapp": {
+      "codeId": "12",
+      "contractAddresses": {
+        "default": "terra1lnfn4f9gpz8fmvquarmuph62wmss3qwh92j98z4y4q4x566stkmsrq8tu3"
+      }
+    },
+    "cw20_token_factory": {
+      "codeId": "13",
+      "contractAddresses": {
+        "default": "terra1n234trhxyj4ze95td2t5ngdpyqd8529urm54epum3aqg3205pcasg0g5pu"
+      }
+    },
+    "token_factory": {
+      "codeId": "14",
+      "contractAddresses": {
+        "default": "terra1l8t0ye7jnn2jv0xh74hp3n3dndncp4h73wkcuvwax5w0pcf68ndqjsnhn6"
+      }
+    }
+  },
+  "testnet": {
+    "counterdapp": {
+      "codeId": "5613",
+      "contractAddresses": {
+        "default": "terra148t5xzant57vakmcxex44ffd4z2zvfrylxk824pk342c5tk633mq32lcjw"
+      }
+    },
+    "cw20_token_factory": {
+      "codeId": "5614",
+      "contractAddresses": {
+        "default": "terra1q34s9svyurhyqges6jewlz4j44mva3uwgg9d6ygjdygnxtnzaxzq4d08q9"
+      }
+    },
+    "token_factory": {
+      "codeId": "5616",
+      "contractAddresses": {
+        "default": "terra10d7yac7n2frjac88yuvqwc4pjpj0tusdmdrxwuegthjx6pst5y8qptcqsa"
+      }
+    }
+  }
+}
