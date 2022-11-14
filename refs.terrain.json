@@ -17,6 +17,9 @@
       "contractAddresses": {
         "default": "terra1l8t0ye7jnn2jv0xh74hp3n3dndncp4h73wkcuvwax5w0pcf68ndqjsnhn6"
       }
+    },
+    "terraswap_factory": {
+      "codeId": "17"
     }
   },
   "testnet": {
@@ -37,6 +40,9 @@
       "contractAddresses": {
         "default": "terra10d7yac7n2frjac88yuvqwc4pjpj0tusdmdrxwuegthjx6pst5y8qptcqsa"
       }
+    },
+    "terraswap_factory": {
+      "codeId": "5624"
     }
   }
 }
