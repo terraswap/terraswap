@@ -27,6 +27,14 @@
             "operations"
           ],
           "properties": {
+            "deadline": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
             "minimum_receive": {
               "anyOf": [
                 {
@@ -67,6 +75,14 @@
             "operation"
           ],
           "properties": {
+            "deadline": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
             "operation": {
               "$ref": "#/definitions/SwapOperation"
             },

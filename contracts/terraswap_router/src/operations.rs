@@ -19,6 +19,7 @@ pub fn execute_swap_operation(
     info: MessageInfo,
     operation: SwapOperation,
     to: Option<String>,
+    deadline: Option<u64>,
 ) -> StdResult<Response> {
     if env.contract.address != info.sender {
         return Err(StdError::generic_err("unauthorized"));
@@ -58,6 +59,7 @@ pub fn execute_swap_operation(
                 offer_asset,
                 None,
                 to,
+                deadline,
             )?]
         }
     };
@@ -71,6 +73,7 @@ pub fn asset_into_swap_msg(
     offer_asset: Asset,
     max_spread: Option<Decimal>,
     to: Option<String>,
+    deadline: Option<u64>,
 ) -> StdResult<CosmosMsg> {
     match offer_asset.info.clone() {
         AssetInfo::NativeToken { denom } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -84,6 +87,7 @@ pub fn asset_into_swap_msg(
                 belief_price: None,
                 max_spread,
                 to,
+                deadline,
             })?,
         })),
         AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -97,6 +101,7 @@ pub fn asset_into_swap_msg(
                     belief_price: None,
                     max_spread,
                     to,
+                    deadline,
                 })?,
             })?,
         })),

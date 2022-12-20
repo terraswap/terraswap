@@ -51,6 +51,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             operations,
             minimum_receive,
             to,
+            deadline,
         } => {
             let api = deps.api;
             execute_swap_operations(
@@ -60,9 +61,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 operations,
                 minimum_receive,
                 optional_addr_validate(api, to)?,
+                deadline,
             )
         }
-        ExecuteMsg::ExecuteSwapOperation { operation, to } => {
+        ExecuteMsg::ExecuteSwapOperation {
+            operation,
+            to,
+            deadline,
+        } => {
             let api = deps.api;
             execute_swap_operation(
                 deps,
@@ -70,6 +76,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 info,
                 operation,
                 optional_addr_validate(api, to)?.map(|v| v.to_string()),
+                deadline,
             )
         }
         ExecuteMsg::AssertMinimumReceive {
@@ -109,6 +116,7 @@ pub fn receive_cw20(
             operations,
             minimum_receive,
             to,
+            deadline,
         } => {
             let api = deps.api;
             execute_swap_operations(
@@ -118,6 +126,7 @@ pub fn receive_cw20(
                 operations,
                 minimum_receive,
                 optional_addr_validate(api, to)?,
+                deadline,
             )
         }
     }
@@ -130,6 +139,7 @@ pub fn execute_swap_operations(
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
     to: Option<Addr>,
+    deadline: Option<u64>,
 ) -> StdResult<Response> {
     let operations_len = operations.len();
     if operations_len == 0 {
@@ -157,6 +167,7 @@ pub fn execute_swap_operations(
                     } else {
                         None
                     },
+                    deadline,
                 })?,
             }))
         })
