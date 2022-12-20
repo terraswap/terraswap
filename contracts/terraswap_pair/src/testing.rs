@@ -1,6 +1,6 @@
 use crate::contract::{
-    assert_max_spread, execute, instantiate, query_pair_info, query_pool, query_reverse_simulation,
-    query_simulation, reply,
+    assert_max_spread, assert_minimum_assets, execute, instantiate, query_pair_info, query_pool,
+    query_reverse_simulation, query_simulation, reply,
 };
 use crate::error::ContractError;
 use terraswap::mock_querier::mock_dependencies;
@@ -462,7 +462,7 @@ fn withdraw_liquidity() {
     // withdraw liquidity
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
+        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity { min_assets: None }).unwrap(),
         amount: Uint128::from(100u128),
     });
 
@@ -516,6 +516,41 @@ fn withdraw_liquidity() {
         log_refund_assets,
         &attr("refund_assets", "100uusd, 100asset0000")
     );
+
+    // withdraw liquidity with assert min_assets
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
+            min_assets: Some([
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::from(1000u128),
+                },
+                Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+            ]),
+        })
+        .unwrap(),
+        amount: Uint128::from(100u128),
+    });
+
+    let env = mock_env();
+    let info = mock_info("liquidity0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
+
+    assert_eq!(
+        res,
+        ContractError::MinAmountAssertion {
+            min_asset: "1000uusd".to_string(),
+            asset: "100uusd".to_string()
+        }
+    )
 }
 
 #[test]
@@ -1148,4 +1183,284 @@ fn test_query_pool() {
         ]
     );
     assert_eq!(res.total_share, total_share_amount);
+}
+
+#[test]
+fn test_assert_minimum_assets_with_equals() {
+    let assets = vec![
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+    ];
+
+    let minimum_assets = Some([
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+    ]);
+
+    assert_minimum_assets(assets, minimum_assets).unwrap();
+}
+
+#[test]
+fn test_assert_minimum_assets_with_normal() {
+    let assets = vec![
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(2u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(2u128),
+        },
+    ];
+
+    let minimum_assets = Some([
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+    ]);
+
+    assert_minimum_assets(assets, minimum_assets).unwrap();
+}
+
+#[test]
+fn test_assert_minimum_assets_with_less_all() {
+    let assets = vec![
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+    ];
+
+    let minimum_assets = Some([
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(2u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(2u128),
+        },
+    ]);
+
+    let err = assert_minimum_assets(assets, minimum_assets).unwrap_err();
+    assert_eq!(
+        err,
+        ContractError::MinAmountAssertion {
+            min_asset: "2uluna".to_string(),
+            asset: "1uluna".to_string()
+        }
+    )
+}
+
+#[test]
+fn test_assert_minimum_assets_with_less_second_asset() {
+    let assets = vec![
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+    ];
+
+    let minimum_assets = Some([
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(2u128),
+        },
+    ]);
+
+    let err = assert_minimum_assets(assets, minimum_assets).unwrap_err();
+    assert_eq!(
+        err,
+        ContractError::MinAmountAssertion {
+            min_asset: "2uusd".to_string(),
+            asset: "1uusd".to_string()
+        }
+    )
+}
+
+#[test]
+fn test_assert_minimum_assets_with_less_first_asset() {
+    let assets = vec![
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+    ];
+
+    let minimum_assets = Some([
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(2u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+    ]);
+
+    let err = assert_minimum_assets(assets, minimum_assets).unwrap_err();
+    assert_eq!(
+        err,
+        ContractError::MinAmountAssertion {
+            min_asset: "2uluna".to_string(),
+            asset: "1uluna".to_string()
+        }
+    )
+}
+
+#[test]
+fn test_assert_minimum_assets_with_unsorted_less_first_asset() {
+    let assets = vec![
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+    ];
+
+    let minimum_assets = Some([
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(2u128),
+        },
+    ]);
+
+    let err = assert_minimum_assets(assets, minimum_assets).unwrap_err();
+    assert_eq!(
+        err,
+        ContractError::MinAmountAssertion {
+            min_asset: "2uluna".to_string(),
+            asset: "1uluna".to_string()
+        }
+    )
+}
+
+#[test]
+fn test_assert_minimum_assets_with_unknown_asset() {
+    let assets = vec![
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(2u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: Uint128::from(2u128),
+        },
+    ];
+
+    let minimum_assets = Some([
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "ukrw".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            amount: Uint128::from(1u128),
+        },
+    ]);
+
+    let err = assert_minimum_assets(assets, minimum_assets).unwrap_err();
+    assert_eq!(
+        err,
+        ContractError::MinAmountAssertion {
+            min_asset: "1ukrw".to_string(),
+            asset: "0ukrw".to_string()
+        }
+    )
 }

@@ -29,4 +29,7 @@ pub enum ContractError {
 
     #[error("Too small offer amount")]
     TooSmallOfferAmount {},
+
+    #[error("Min amount assertion ({min_asset} > {asset})")]
+    MinAmountAssertion { min_asset: String, asset: String },
 }
