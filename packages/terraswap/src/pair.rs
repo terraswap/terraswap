@@ -22,7 +22,6 @@ pub enum ExecuteMsg {
     /// ProvideLiquidity a user provides pool liquidity
     ProvideLiquidity {
         assets: [Asset; 2],
-        slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
     },
     /// Swap an offer asset to the other

@@ -25,21 +25,13 @@ The contract has two types of pool, the one is collateral and the other is asset
 
 Whenever liquidity is deposited into a pool, special tokens known as liquidity tokens are minted to the provider’s address, in proportion to how much liquidity they contributed to the pool. These tokens are a representation of a liquidity provider’s contribution to a pool. Whenever a trade occurs, the `lp_commission%` of fee is distributed pro-rata to all LPs in the pool at the moment of the trade. To receive the underlying liquidity back, plus commission fees that were accrued while their liquidity was locked, LPs must burn their liquidity tokens.
 
-When providing liquidity from a smart contract, the most important thing to keep in mind is that tokens deposited into a pool at any rate other than the current oracle price ratio are vulnerable to being arbitraged. As an example, if the ratio of x:y in a pair is 10:2 (i.e. the price is 5), and someone naively adds liquidity at 5:2 (a price of 2.5), the contract will simply accept all tokens (changing the price to 3.75 and opening up the market to arbitrage), but only issue pool tokens entitling the sender to the amount of assets sent at the proper ratio, in this case 5:1. To avoid donating to arbitrageurs, it is imperative to add liquidity at the current price. Luckily, it’s easy to ensure that this condition is met!
+When providing liquidity from a smart contract, tokens deposited into a pool at a rate different from the current oracle price will be returned to users.
 
 > Note before executing the `provide_liqudity` operation, a user must allow the contract to use the liquidity amount of asset in the token contract.
-
-#### Slipage Tolerance
-
-If a user specify the slipage tolerance at provide liquidity msg, the contract restricts the operation when the exchange rate is dropped more than the tolerance.
-
-So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 ASSET, amountUSTMin should be set to e.g. 198 UST, and amountASSETMin should be set to .99 ASSET. This means that, at worst, liquidity will be added at a rate between 198 ASSET/1 UST and 202.02 UST/1 ASSET (200 UST/.99 ASSET).
 
 #### Request Format
 
 - Provide Liquidity
-
-  1. Without Slippage Tolerance
 
   ```json
   {
@@ -63,34 +55,6 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         }
       ]
     }
-  }
-  ```
-
-  2. With Slippage Tolerance
-
-  ```json
-  {
-    "provide_liquidity": {
-      "assets": [
-        {
-          "info": {
-            "token": {
-              "contract_addr": "terra~~"
-            }
-          },
-          "amount": "1000000"
-        },
-        {
-          "info": {
-            "native_token": {
-              "denom": "uusd"
-            }
-          },
-          "amount": "1000000"
-        }
-      ]
-    },
-    "slippage_tolerance": "0.01"
   }
   ```
 
