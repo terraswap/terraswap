@@ -29,6 +29,10 @@ When providing liquidity from a smart contract, tokens deposited into a pool at 
 
 > Note before executing the `provide_liqudity` operation, a user must allow the contract to use the liquidity amount of asset in the token contract.
 
+#### Min Assets
+
+If a user specify the `min_assets` at `withdraw_liquidity` msg, the contract restricts the operation when the returned assets are less than the min assets.
+
 #### Request Format
 
 - Provide Liquidity
@@ -59,6 +63,35 @@ When providing liquidity from a smart contract, tokens deposited into a pool at 
   ```
 
 - Withdraw Liquidity (must be sent to liquidity token contract)
+  1. With Min Assets
+
+  ```json
+  {
+    "withdraw_liquidity": {
+      "min_assets": [
+        {
+          "info": {
+            "token": {
+              "contract_addr": "terra~~"
+            }
+          },
+          "amount": "1000000"
+        },
+        {
+          "info": {
+            "native_token": {
+              "denom": "uusd"
+            }
+          },
+          "amount": "1000000"
+        }
+      ]
+    }
+  }
+  ```
+
+  2. Without Min Assets
+
   ```json
   {
     "withdraw_liquidity": {}

@@ -175,14 +175,14 @@ pub fn receive_cw20(
                 to_addr,
             )
         }
-        Ok(Cw20HookMsg::WithdrawLiquidity {}) => {
+        Ok(Cw20HookMsg::WithdrawLiquidity { min_assets }) => {
             let config: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
             if deps.api.addr_canonicalize(info.sender.as_str())? != config.liquidity_token {
                 return Err(ContractError::Unauthorized {});
             }
 
             let sender_addr = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            withdraw_liquidity(deps, env, info, sender_addr, cw20_msg.amount)
+            withdraw_liquidity(deps, env, info, sender_addr, cw20_msg.amount, min_assets)
         }
         Err(err) => Err(ContractError::Std(err)),
     }
@@ -338,6 +338,7 @@ pub fn withdraw_liquidity(
     _info: MessageInfo,
     sender: Addr,
     amount: Uint128,
+    min_assets: Option<[Asset; 2]>,
 ) -> Result<Response, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let liquidity_addr: Addr = deps.api.addr_humanize(&pair_info.liquidity_token)?;
@@ -353,6 +354,8 @@ pub fn withdraw_liquidity(
             amount: a.amount * share_ratio,
         })
         .collect();
+
+    assert_minimum_assets(refund_assets.to_vec(), min_assets)?;
 
     // update pool info
     Ok(Response::new()
@@ -740,6 +743,40 @@ pub fn assert_max_spread(
         if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
             return Err(ContractError::MaxSpreadAssertion {});
         }
+    }
+
+    Ok(())
+}
+
+pub fn assert_minimum_assets(
+    assets: Vec<Asset>,
+    min_assets: Option<[Asset; 2]>,
+) -> Result<(), ContractError> {
+    if let Some(min_assets) = min_assets {
+        min_assets.iter().try_for_each(|min_asset| {
+            match assets.iter().find(|asset| asset.info == min_asset.info) {
+                Some(asset) => {
+                    if asset.amount.cmp(&min_asset.amount).is_lt() {
+                        return Err(ContractError::MinAmountAssertion {
+                            min_asset: min_asset.to_string(),
+                            asset: asset.to_string(),
+                        });
+                    }
+                }
+                None => {
+                    return Err(ContractError::MinAmountAssertion {
+                        min_asset: min_asset.to_string(),
+                        asset: Asset {
+                            info: min_asset.info.clone(),
+                            amount: Uint128::zero(),
+                        }
+                        .to_string(),
+                    })
+                }
+            };
+
+            Ok(())
+        })?;
     }
 
     Ok(())

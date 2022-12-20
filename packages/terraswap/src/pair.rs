@@ -42,7 +42,9 @@ pub enum Cw20HookMsg {
         max_spread: Option<Decimal>,
         to: Option<String>,
     },
-    WithdrawLiquidity {},
+    WithdrawLiquidity {
+        min_assets: Option<[Asset; 2]>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
