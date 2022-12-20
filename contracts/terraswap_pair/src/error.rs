@@ -21,14 +21,8 @@ pub enum ContractError {
     #[error("Max spread assertion")]
     MaxSpreadAssertion {},
 
-    #[error("Max slippage assertion")]
-    MaxSlippageAssertion {},
-
     #[error("Asset mismatch")]
     AssetMismatch {},
-
-    #[error("Too small offer amount")]
-    TooSmallOfferAmount {},
 
     #[error("Min amount assertion ({min_asset} > {asset})")]
     MinAmountAssertion { min_asset: String, asset: String },
