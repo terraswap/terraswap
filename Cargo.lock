@@ -687,7 +687,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-pair"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -695,7 +695,6 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "cw20",
- "integer-sqrt",
  "protobuf",
  "schemars",
  "serde",
