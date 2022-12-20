@@ -6,9 +6,9 @@ use crate::state::PAIR_INFO;
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Decimal256,
-    Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
-    Uint128, Uint256, WasmMsg,
+    coins, from_binary, to_binary, Addr, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal,
+    Decimal256, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult,
+    SubMsg, Uint128, Uint256, WasmMsg,
 };
 
 use cw2::set_contract_version;
@@ -89,11 +89,9 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::ProvideLiquidity {
-            assets,
-            slippage_tolerance,
-            receiver,
-        } => provide_liquidity(deps, env, info, assets, slippage_tolerance, receiver),
+        ExecuteMsg::ProvideLiquidity { assets, receiver } => {
+            provide_liquidity(deps, env, info, assets, receiver)
+        }
         ExecuteMsg::Swap {
             offer_asset,
             belief_price,
@@ -215,7 +213,6 @@ pub fn provide_liquidity(
     env: Env,
     info: MessageInfo,
     assets: [Asset; 2],
-    slippage_tolerance: Option<Decimal>,
     receiver: Option<String>,
 ) -> Result<Response, ContractError> {
     for asset in assets.iter() {
@@ -240,26 +237,12 @@ pub fn provide_liquidity(
 
     let mut messages: Vec<CosmosMsg> = vec![];
     for (i, pool) in pools.iter_mut().enumerate() {
-        // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
-        if let AssetInfo::Token { contract_addr, .. } = &pool.info {
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: contract_addr.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: info.sender.to_string(),
-                    recipient: env.contract.address.to_string(),
-                    amount: deposits[i],
-                })?,
-                funds: vec![],
-            }));
-        } else {
+        if pool.is_native_token() {
             // If the asset is native token, balance is already increased
             // To calculated properly we should subtract user deposit from the pool
             pool.amount = pool.amount.checked_sub(deposits[i])?;
         }
     }
-
-    // assert slippage tolerance
-    assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
 
     let liquidity_token = deps.api.addr_humanize(&pair_info.liquidity_token)?;
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
@@ -288,6 +271,42 @@ pub fn provide_liquidity(
     // prevent providing free token
     if share.is_zero() {
         return Err(ContractError::InvalidZeroAmount {});
+    }
+
+    // refund of remaining native token & desired of token
+    for (i, pool) in pools.iter().enumerate() {
+        let desired_amount = match total_share.is_zero() {
+            true => deposits[i],
+            false => {
+                let mut desired_amount = pool.amount.multiply_ratio(share, total_share);
+                if desired_amount.multiply_ratio(total_share, share) != pool.amount {
+                    desired_amount += Uint128::from(1u8);
+                }
+
+                desired_amount
+            }
+        };
+
+        let remain_amount = deposits[i] - desired_amount;
+
+        if let AssetInfo::NativeToken { denom, .. } = &pool.info {
+            if !remain_amount.is_zero() {
+                messages.push(CosmosMsg::Bank(BankMsg::Send {
+                    to_address: info.sender.to_string(),
+                    amount: coins(remain_amount.u128(), denom),
+                }))
+            }
+        } else if let AssetInfo::Token { contract_addr, .. } = &pool.info {
+            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: contract_addr.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    owner: info.sender.to_string(),
+                    recipient: env.contract.address.to_string(),
+                    amount: desired_amount,
+                })?,
+                funds: vec![],
+            }));
+        }
     }
 
     // mint LP token to sender
@@ -717,35 +736,7 @@ pub fn assert_max_spread(
     Ok(())
 }
 
-fn assert_slippage_tolerance(
-    slippage_tolerance: &Option<Decimal>,
-    deposits: &[Uint128; 2],
-    pools: &[Asset; 2],
-) -> Result<(), ContractError> {
-    if let Some(slippage_tolerance) = *slippage_tolerance {
-        let slippage_tolerance: Decimal256 = Decimal256::from_str(&slippage_tolerance.to_string())?;
-        if slippage_tolerance > Decimal256::one() {
-            return Err(StdError::generic_err("slippage_tolerance cannot bigger than 1").into());
-        }
-
-        let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
-        let deposits: [Uint256; 2] = [deposits[0].into(), deposits[1].into()];
-        let pools: [Uint256; 2] = [pools[0].amount.into(), pools[1].amount.into()];
-
-        // Ensure each prices are not dropped as much as slippage tolerance rate
-        if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
-            > Decimal256::from_ratio(pools[0], pools[1])
-            || Decimal256::from_ratio(deposits[1], deposits[0]) * one_minus_slippage_tolerance
-                > Decimal256::from_ratio(pools[1], pools[0])
-        {
-            return Err(ContractError::MaxSlippageAssertion {});
-        }
-    }
-
-    Ok(())
-}
-
-const TARGET_CONTRACT_VERSION: &str = "0.1.0";
+const TARGET_CONTRACT_VERSION: &str = "0.1.1";
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let prev_version = cw2::get_contract_version(deps.as_ref().storage)?;
