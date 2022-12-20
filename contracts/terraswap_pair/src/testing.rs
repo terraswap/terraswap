@@ -605,7 +605,8 @@ fn try_native_to_token() {
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
         .unwrap();
-    let expected_commission_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
+    let expected_commission_amount =
+        expected_ret_amount.multiply_ratio(3u128, 1000u128) + Uint128::from(1u8); // 0.3%, round up
     let expected_return_amount = expected_ret_amount
         .checked_sub(expected_commission_amount)
         .unwrap();
@@ -793,7 +794,8 @@ fn try_token_to_native() {
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
         .unwrap();
-    let expected_commission_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
+    let expected_commission_amount =
+        expected_ret_amount.multiply_ratio(3u128, 1000u128) + Uint128::from(1u8); // 0.3%, round up
     let expected_return_amount = expected_ret_amount
         .checked_sub(expected_commission_amount)
         .unwrap();
