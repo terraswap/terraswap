@@ -22,6 +22,14 @@
                 }
               ]
             },
+            "deadline": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
             "max_spread": {
               "anyOf": [
                 {
@@ -52,6 +60,14 @@
         "withdraw_liquidity": {
           "type": "object",
           "properties": {
+            "deadline": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
             "min_assets": {
               "type": [
                 "array",

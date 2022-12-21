@@ -37,6 +37,7 @@ pub enum ExecuteMsg {
         operations: Vec<SwapOperation>,
         minimum_receive: Option<Uint128>,
         to: Option<String>,
+        deadline: Option<u64>,
     },
 
     /// Internal use
@@ -44,6 +45,7 @@ pub enum ExecuteMsg {
     ExecuteSwapOperation {
         operation: SwapOperation,
         to: Option<String>,
+        deadline: Option<u64>,
     },
     /// Internal use
     /// Check the swap amount is exceed minimum_receive
@@ -62,6 +64,7 @@ pub enum Cw20HookMsg {
         operations: Vec<SwapOperation>,
         minimum_receive: Option<Uint128>,
         to: Option<String>,
+        deadline: Option<u64>,
     },
 }
 

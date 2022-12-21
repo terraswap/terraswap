@@ -23,6 +23,7 @@ pub enum ExecuteMsg {
     ProvideLiquidity {
         assets: [Asset; 2],
         receiver: Option<String>,
+        deadline: Option<u64>,
     },
     /// Swap an offer asset to the other
     Swap {
@@ -30,6 +31,7 @@ pub enum ExecuteMsg {
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         to: Option<String>,
+        deadline: Option<u64>,
     },
 }
 
@@ -41,9 +43,11 @@ pub enum Cw20HookMsg {
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         to: Option<String>,
+        deadline: Option<u64>,
     },
     WithdrawLiquidity {
         min_assets: Option<[Asset; 2]>,
+        deadline: Option<u64>,
     },
 }
 

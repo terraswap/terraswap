@@ -35,6 +35,14 @@
               "maxItems": 2,
               "minItems": 2
             },
+            "deadline": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
             "receiver": {
               "type": [
                 "string",
@@ -68,6 +76,14 @@
                   "type": "null"
                 }
               ]
+            },
+            "deadline": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
             },
             "max_spread": {
               "anyOf": [

@@ -33,6 +33,10 @@ When providing liquidity from a smart contract, tokens deposited into a pool at 
 
 If a user specify the `min_assets` at `withdraw_liquidity` msg, the contract restricts the operation when the returned assets are less than the min assets.
 
+#### Deadline
+
+A `deadline` sets a time after which a transaction can no longer be executed. This limits validators holding signed transactions for extended durations and executing them based off market movements. It also reduces uncertainty around transactions that take a long time to execute due to issues with gas price.
+
 #### Request Format
 
 - Provide Liquidity
