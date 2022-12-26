@@ -33,8 +33,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
 /// Commission rate == 0.3%
-const COMMISSION_RATE_ATOMICS: u64 = 3;
-const COMMISSION_RATE_DECIMALS: u32 = 3;
+const COMMISSION_RATE: u64 = 3;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -609,8 +608,7 @@ fn compute_swap(
     let ask_pool: Uint256 = ask_pool.into();
     let offer_amount: Uint256 = offer_amount.into();
 
-    let commission_rate =
-        Decimal256::from_atomics(COMMISSION_RATE_ATOMICS, COMMISSION_RATE_DECIMALS).unwrap();
+    let commission_rate = Decimal256::permille(COMMISSION_RATE);
 
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
@@ -654,8 +652,7 @@ fn compute_offer_amount(
     let ask_pool: Uint256 = ask_pool.into();
     let ask_amount: Uint256 = ask_amount.into();
 
-    let commission_rate =
-        Decimal256::from_atomics(COMMISSION_RATE_ATOMICS, COMMISSION_RATE_DECIMALS).unwrap();
+    let commission_rate = Decimal256::permille(COMMISSION_RATE);
 
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
