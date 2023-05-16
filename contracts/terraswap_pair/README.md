@@ -4,7 +4,7 @@
 
 ### Initialize
 
-This is mainly used from terraswap factory contract to create new terraswap pair. It initialize all swap created parameters which can be updated later with owner key.
+This is mainly used from terraswap factory contract to create new terraswap pair. It initializes all swap created parameters which can be updated later with owner key.
 
 It creates liquidity token contract as init response, and execute init hook to register created liquidity token contract to self.
 
@@ -29,9 +29,13 @@ When providing liquidity from a smart contract, tokens deposited into a pool at 
 
 > Note before executing the `provide_liqudity` operation, a user must allow the contract to use the liquidity amount of asset in the token contract.
 
+#### Receiver
+
+If a user specifies the `receiver` at `provide_liqudity` msg, sends LP token to receiver. The default value is sender.
+
 #### Min Assets
 
-If a user specify the `min_assets` at `withdraw_liquidity` msg, the contract restricts the operation when the returned assets are less than the min assets.
+If a user specifies the `min_assets` at `withdraw_liquidity` msg, the contract restricts the operation when the returned assets are less than the min assets.
 
 #### Deadline
 
@@ -48,7 +52,7 @@ A `deadline` sets a time after which a transaction can no longer be executed. Th
         {
           "info": {
             "token": {
-              "contract_addr": "terra~~"
+              "contract_addr": "terra..."
             }
           },
           "amount": "1000000"
@@ -56,7 +60,7 @@ A `deadline` sets a time after which a transaction can no longer be executed. Th
         {
           "info": {
             "native_token": {
-              "denom": "uusd"
+              "denom": "uluna"
             }
           },
           "amount": "1000000"
@@ -76,7 +80,7 @@ A `deadline` sets a time after which a transaction can no longer be executed. Th
         {
           "info": {
             "token": {
-              "contract_addr": "terra~~"
+              "contract_addr": "terra..."
             }
           },
           "amount": "1000000"
@@ -84,7 +88,7 @@ A `deadline` sets a time after which a transaction can no longer be executed. Th
         {
           "info": {
             "native_token": {
-              "denom": "uusd"
+              "denom": "uluna"
             }
           },
           "amount": "1000000"
