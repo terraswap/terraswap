@@ -103,7 +103,7 @@ fn proper_initialization() {
 fn provide_liquidity() {
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
-        amount: Uint128::from(200u128),
+        amount: Uint128::from(1_100u128),
     }]);
 
     deps.querier.with_token_balances(&[
@@ -148,6 +148,48 @@ fn provide_liquidity() {
 
     let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
+    // should raise MinimumLiquidityAmountError with insufficient initial liquidity
+    let msg = ExecuteMsg::ProvideLiquidity {
+        assets: [
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                amount: Uint128::from(1u128),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                amount: Uint128::from(1u128),
+            },
+        ],
+        receiver: None,
+        deadline: None,
+        slippage_tolerance: None,
+    };
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(1u128),
+        }],
+    );
+
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
+
+    match res {
+        ContractError::MinimumLiquidityAmountError {
+            min_lp_token,
+            given_lp,
+        } => {
+            assert_eq!(min_lp_token, "1000");
+            assert_eq!(given_lp, "1");
+        }
+        _ => panic!("Must return MinimumLiquidityAmountError"),
+    }
+
     // successfully provide liquidity for the exist pool
     let msg = ExecuteMsg::ProvideLiquidity {
         assets: [
@@ -155,13 +197,13 @@ fn provide_liquidity() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: Uint128::from(100u128),
+                amount: Uint128::from(1_100u128),
             },
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-                amount: Uint128::from(100u128),
+                amount: Uint128::from(1_100u128),
             },
         ],
         receiver: None,
@@ -174,12 +216,27 @@ fn provide_liquidity() {
         "addr0000",
         &[Coin {
             denom: "uusd".to_string(),
-            amount: Uint128::from(100u128),
+            amount: Uint128::from(1_100u128),
         }],
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
-    let transfer_from_msg = res.messages.get(0).expect("no message");
-    let mint_msg = res.messages.get(1).expect("no message");
+    let liquidity_to_contract_msg = res.messages.get(0).expect("no message");
+    let transfer_from_msg = res.messages.get(1).expect("no message");
+    let mint_msg = res.messages.get(2).expect("no message");
+
+    assert_eq!(
+        liquidity_to_contract_msg,
+        &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "liquidity0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Mint {
+                recipient: MOCK_CONTRACT_ADDR.to_string(),
+                amount: 1_000u128.into(),
+            })
+            .unwrap(),
+            funds: vec![],
+        }))
+    );
+
     assert_eq!(
         transfer_from_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -187,7 +244,7 @@ fn provide_liquidity() {
             msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                 owner: "addr0000".to_string(),
                 recipient: MOCK_CONTRACT_ADDR.to_string(),
-                amount: Uint128::from(100u128),
+                amount: Uint128::from(1_100u128),
             })
             .unwrap(),
             funds: vec![],

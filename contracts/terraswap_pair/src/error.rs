@@ -32,4 +32,10 @@ pub enum ContractError {
 
     #[error("Max slippage assertion")]
     MaxSlippageAssertion {},
+
+    #[error("More initial liquidity needed ({min_lp_token} > {given_lp})")]
+    MinimumLiquidityAmountError {
+        min_lp_token: String,
+        given_lp: String,
+    },
 }
