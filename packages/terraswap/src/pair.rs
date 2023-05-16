@@ -24,6 +24,7 @@ pub enum ExecuteMsg {
         assets: [Asset; 2],
         receiver: Option<String>,
         deadline: Option<u64>,
+        slippage_tolerance: Option<Decimal>,
     },
     /// Swap an offer asset to the other
     Swap {
