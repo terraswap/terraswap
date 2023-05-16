@@ -29,6 +29,8 @@ use terraswap::pair::{
 const CONTRACT_NAME: &str = "crates.io:terraswap-factory";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+const CREATE_PAIR_REPLY_ID: u64 = 1;
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -163,7 +165,7 @@ pub fn execute_create_pair(
             ("pair", &format!("{}-{}", assets[0].info, assets[1].info)),
         ])
         .add_submessage(SubMsg {
-            id: 1,
+            id: CREATE_PAIR_REPLY_ID,
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id: config.pair_code_id,
@@ -238,6 +240,10 @@ pub fn execute_migrate_pair(
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
+    if msg.id != CREATE_PAIR_REPLY_ID {
+        return Err(StdError::generic_err("invalid reply msg"));
+    }
+
     let tmp_pair_info = TMP_PAIR_INFO.load(deps.storage)?;
 
     let res: MsgInstantiateContractResponse =
