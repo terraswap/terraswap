@@ -329,6 +329,7 @@ pub fn provide_liquidity(
     }
 
     // refund of remaining native token & desired of token
+    let mut refund_assets: Vec<Asset> = vec![];
     for (i, pool) in pools.iter().enumerate() {
         let desired_amount = match total_share.is_zero() {
             true => deposits[i],
@@ -348,6 +349,11 @@ pub fn provide_liquidity(
                 return Err(ContractError::MaxSlippageAssertion {});
             }
         }
+
+        refund_assets.push(Asset {
+            info: pool.info.clone(),
+            amount: remain_amount,
+        });
 
         if let AssetInfo::NativeToken { denom, .. } = &pool.info {
             if !remain_amount.is_zero() {
@@ -389,6 +395,10 @@ pub fn provide_liquidity(
         ("receiver", receiver.as_str()),
         ("assets", &format!("{}, {}", assets[0], assets[1])),
         ("share", &share.to_string()),
+        (
+            "refund_assets",
+            &format!("{}, {}", refund_assets[0], refund_assets[1]),
+        ),
     ]))
 }
 
