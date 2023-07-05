@@ -29,4 +29,7 @@ pub enum ContractError {
 
     #[error("Expired deadline")]
     ExpiredDeadline {},
+
+    #[error("Max slippage assertion")]
+    MaxSlippageAssertion {},
 }

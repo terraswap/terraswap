@@ -3,12 +3,13 @@ use crate::contract::{
     query_pair_info, query_pool, query_reverse_simulation, query_simulation, reply,
 };
 use crate::error::ContractError;
+use std::str::FromStr;
 use terraswap::mock_querier::mock_dependencies;
 
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, coins, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError,
-    SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg,
+    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
@@ -165,6 +166,7 @@ fn provide_liquidity() {
         ],
         receiver: None,
         deadline: None,
+        slippage_tolerance: None,
     };
 
     let env = mock_env();
@@ -204,8 +206,8 @@ fn provide_liquidity() {
         }))
     );
 
-    // provide more liquidity 1:2, which is not proportional to 1:1,
-    // then it must accept 1:1 and treat left amount as donation
+    // providing liquidity with a ratio exceeding the specified slippage tolerance
+    // should return MaxSlippageAssertion
     deps.querier.with_balance(&[(
         &MOCK_CONTRACT_ADDR.to_string(),
         vec![Coin {
@@ -244,6 +246,7 @@ fn provide_liquidity() {
         ],
         receiver: Some("staking0000".to_string()), // try changing receiver
         deadline: None,
+        slippage_tolerance: Some(Decimal::from_str("0.005").unwrap()),
     };
 
     let env = mock_env();
@@ -255,19 +258,67 @@ fn provide_liquidity() {
         }],
     );
 
-    // only accept 100, then 50 share will be generated with 100 * (100 / 200)
-    let res: Response = execute(deps.as_mut(), env, info, msg).unwrap();
-    let refund_msg = res.messages.get(0).expect("no message");
-    let transfer_from_msg = res.messages.get(1).expect("no message");
-    let mint_msg = res.messages.get(2).expect("no message");
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
+    match res {
+        ContractError::MaxSlippageAssertion { .. } => (),
+        _ => panic!("MaxSlippageAssertion should be raised"),
+    }
 
-    assert_eq!(
-        refund_msg,
-        &SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
-            to_address: "addr0000".to_string(),
-            amount: coins(100u128, "uusd".to_string())
-        }))
+    // providing liquidity at a rate that is not equal to the existing one
+    // should refund the remained amount of one side's assets
+    deps.querier.with_balance(&[(
+        &MOCK_CONTRACT_ADDR.to_string(),
+        vec![Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(
+                100u128 + 200u128, /* user deposit must be pre-applied */
+            ),
+        }],
+    )]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128))],
+        ),
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(200u128))],
+        ),
+    ]);
+
+    let msg = ExecuteMsg::ProvideLiquidity {
+        assets: [
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                amount: Uint128::from(100u128),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                amount: Uint128::from(100u128),
+            },
+        ],
+        receiver: Some("staking0000".to_string()), // try changing receiver
+        deadline: None,
+        slippage_tolerance: Some(Decimal::from_str("0.05").unwrap()),
+    };
+
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(100u128),
+        }],
     );
+
+    let res: Response = execute(deps.as_mut(), env, info, msg).unwrap();
+    let transfer_from_msg = res.messages.get(0).expect("no message");
+    let mint_msg = res.messages.get(1).expect("no message");
 
     assert_eq!(
         transfer_from_msg,
@@ -313,6 +364,7 @@ fn provide_liquidity() {
         ],
         receiver: None,
         deadline: None,
+        slippage_tolerance: Some(Decimal::from_str("0.005").unwrap()),
     };
 
     let env = mock_env();
@@ -370,6 +422,7 @@ fn provide_liquidity() {
         ],
         receiver: None,
         deadline: None,
+        slippage_tolerance: Some(Decimal::from_str("0.05").unwrap()),
     };
 
     let env = mock_env();
