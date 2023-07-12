@@ -34,6 +34,9 @@ const INSTANTIATE_REPLY_ID: u64 = 1;
 
 /// Commission rate == 0.3%
 const COMMISSION_RATE: u64 = 3;
+
+const MINIMUM_LIQUIDITY_AMOUNT: u128 = 1_000;
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -280,12 +283,34 @@ pub fn provide_liquidity(
         // Initial share = collateral amount
         let deposit0: Uint256 = deposits[0].into();
         let deposit1: Uint256 = deposits[1].into();
-        match (Decimal256::from_ratio(deposit0.mul(deposit1), 1u8).sqrt() * Uint256::from(1u8))
-            .try_into()
+        let share: Uint128 = match (Decimal256::from_ratio(deposit0.mul(deposit1), 1u8).sqrt()
+            * Uint256::from(1u8))
+        .try_into()
         {
             Ok(share) => share,
             Err(e) => return Err(ContractError::ConversionOverflowError(e)),
-        }
+        };
+
+        // the initial liquidity is deducted by MINIMUM_LIQUIDITY_AMOUNT
+        // to protect a pair from malicious provision blocking
+        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: deps
+                .api
+                .addr_humanize(&pair_info.liquidity_token)?
+                .to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Mint {
+                recipient: env.contract.address.to_string(),
+                amount: MINIMUM_LIQUIDITY_AMOUNT.into(),
+            })?,
+            funds: vec![],
+        }));
+
+        share
+            .checked_sub(MINIMUM_LIQUIDITY_AMOUNT.into())
+            .map_err(|_| ContractError::MinimumLiquidityAmountError {
+                min_lp_token: MINIMUM_LIQUIDITY_AMOUNT.to_string(),
+                given_lp: share.to_string(),
+            })?
     } else {
         // min(1, 2)
         // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
