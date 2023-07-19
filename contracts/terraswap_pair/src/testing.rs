@@ -689,6 +689,25 @@ fn withdraw_liquidity() {
 }
 
 #[test]
+fn failed_reply_with_unknown_id() {
+    let mut deps = mock_dependencies(&[]);
+
+    let res = reply(
+        deps.as_mut(),
+        mock_env(),
+        Reply {
+            id: 9,
+            result: SubMsgResult::Ok(SubMsgResponse {
+                events: vec![],
+                data: Some(vec![].into()),
+            }),
+        },
+    );
+
+    assert_eq!(res, Err(StdError::generic_err("invalid reply msg")))
+}
+
+#[test]
 fn try_native_to_token() {
     let total_share = Uint128::from(30000000000u128);
     let asset_pool_amount = Uint128::from(20000000000u128);

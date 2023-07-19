@@ -19,6 +19,7 @@ use terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
+use terraswap::util::migrate_version;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-router";
@@ -426,8 +427,14 @@ fn test_invalid_operations() {
     .is_ok());
 }
 
+const TARGET_CONTRACT_VERSION: &str = "0.1.0";
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    migrate_version(
+        deps,
+        TARGET_CONTRACT_VERSION,
+        CONTRACT_NAME,
+        CONTRACT_VERSION,
+    )?;
     Ok(Response::default())
 }

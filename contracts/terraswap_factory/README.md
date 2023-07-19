@@ -3,6 +3,7 @@
 The factory contract can perform creation of terraswap pair contract and also be used as directory contract for all pairs.
 
 ## InstantiateMsg
+Register verified pair contract and token contract for pair contract creation. The sender will be the owner of the factory contract.
 
 ```json
 {
@@ -18,6 +19,7 @@ The factory contract can perform creation of terraswap pair contract and also be
 ## ExecuteMsg
 
 ### `update_config`
+Change the factory contract's owner and relevant code IDs for future pair contract creation. This execution is only permitted to the factory contract owner.
 
 ```json
 {
@@ -30,43 +32,56 @@ The factory contract can perform creation of terraswap pair contract and also be
 ```
 
 ### `create_pair`
+When a user executes `CreatePair` operation, it creates `Pair` contract and `LP(liquidity provider)` token contract.
+
+In order to create pairs with native tokens, including IBC tokens, they must first be registered with their decimals by the factory contract owner. See [add_native_token_decimals](#add_native_token_decimals) for more details.
 
 ```json
 {
   "create_pair": {
-    "asset_infos": [
+    "assets": [
       {
-        "token": {
-          "contract_addr": "terra..."
-        }
+        "info": {
+          "token": {
+            "contract_addr": "terra..."
+          }
+        },
+        "amount": "0"
       },
       {
-        "native_token": {
-          "denom": "uusd"
-        }
+        "info": {
+          "native_token": {
+            "denom": "uluna"
+          }
+        },
+        "amount": "0"
       }
     ]
   }
 }
 ```
 
-### `register`
+### `add_native_token_decimals`
+This operation which is only allowed for the factory contract owner, registers native tokens (including IBC tokens) along with their decimals.
+
+The contract will create a new pair using the provided token information if the pair contains a token registered by this operation,
 
 ```json
 {
-  "register": {
-    "asset_infos": [
-      {
-        "token": {
-          "contract_addr": "terra..."
-        }
-      },
-      {
-        "native_token": {
-          "denom": "uusd"
-        }
-      }
-    ]
+  "add_native_token_decimals": {
+    "denom": "uluna",
+    "decimals": 6
+  }
+}
+```
+
+### `migrate_pair`
+
+```json
+{
+  "migrate_pair": {
+    "contract": "terra...",
+    "code_id": 123
   }
 }
 ```
@@ -94,7 +109,7 @@ The factory contract can perform creation of terraswap pair contract and also be
       },
       {
         "native_token": {
-          "denom": "uusd"
+          "denom": "uluna"
         }
       }
     ]
@@ -102,71 +117,33 @@ The factory contract can perform creation of terraswap pair contract and also be
 }
 ```
 
-Register verified pair contract and token contract for pair contract creation. The sender will be the owner of the factory contract.
-
-```rust
-{
-    /// Pair contract code ID, which is used to
-    pub pair_code_id: u64,
-    pub token_code_id: u64,
-    pub init_hook: Option<InitHook>,
-}
-```
-
-### UpdateConfig
-
-The factory contract owner can change relevant code IDs for future pair contract creation.
+### `pairs`
 
 ```json
 {
-    "update_config":
-    {
-        "owner": Option<HumanAddr>,
-        "pair_code_id": Option<u64>,
-        "token_code_id": Option<u64>,
-    }
-}
-```
-
-### Create Pair
-
-When a user execute `CreatePair` operation, it creates `Pair` contract and `LP(liquidity provider)` token contract. It also creates not fully initialized `PairInfo`, which will be initialized with `Register` operation from the pair contract's `InitHook`.
-
-```json
-{
-  "create_pair": {
-    "asset_infos": [
+  "pairs": {
+    "start_after": [
       {
         "token": {
-          "contract_addr": "terra1~~"
+          "contract_addr": "terra..."
         }
       },
       {
         "native_token": {
-          "denom": "uusd"
+          "denom": "uluna"
         }
       }
-    ]
+    ],
+    "limit": 10
   }
 }
 ```
 
-### Register
-
-When a user executes `CreatePair` operation, it passes `InitHook` to `Pair` contract and `Pair` contract will invoke passed `InitHook` registering created `Pair` contract to the factory. This operation is only allowed for a pair, which is not fully initialized.
-
-Once a `Pair` contract invokes it, the sender address is registered as `Pair` contract address for the given asset_infos.
-
+### `native_token_decimals`
 ```json
-{ "register":
-    "asset_infos": [{
-        "token": {
-            "contract_addr": "terra1~~",
-            }
-        }, {
-            "native_token": {
-                "denom": "uusd",
-            }
-    }],
+{
+  "native_token_decimals": {
+    "denom": "uluna"
+  }
 }
 ```

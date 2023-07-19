@@ -25,6 +25,7 @@ use terraswap::pair::{
 };
 use terraswap::querier::query_token_info;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
+use terraswap::util::migrate_version;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-pair";
@@ -220,6 +221,10 @@ pub fn receive_cw20(
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+    if msg.id != INSTANTIATE_REPLY_ID {
+        return Err(StdError::generic_err("invalid reply msg"));
+    }
+
     let data = msg.result.unwrap().data.unwrap();
     let res: MsgInstantiateContractResponse =
         Message::parse_from_bytes(data.as_slice()).map_err(|_| {
@@ -329,6 +334,7 @@ pub fn provide_liquidity(
     }
 
     // refund of remaining native token & desired of token
+    let mut refund_assets: Vec<Asset> = vec![];
     for (i, pool) in pools.iter().enumerate() {
         let desired_amount = match total_share.is_zero() {
             true => deposits[i],
@@ -348,6 +354,11 @@ pub fn provide_liquidity(
                 return Err(ContractError::MaxSlippageAssertion {});
             }
         }
+
+        refund_assets.push(Asset {
+            info: pool.info.clone(),
+            amount: remain_amount,
+        });
 
         if let AssetInfo::NativeToken { denom, .. } = &pool.info {
             if !remain_amount.is_zero() {
@@ -389,6 +400,10 @@ pub fn provide_liquidity(
         ("receiver", receiver.as_str()),
         ("assets", &format!("{}, {}", assets[0], assets[1])),
         ("share", &share.to_string()),
+        (
+            "refund_assets",
+            &format!("{}, {}", refund_assets[0], refund_assets[1]),
+        ),
     ]))
 }
 
@@ -851,22 +866,12 @@ pub fn assert_deadline(blocktime: u64, deadline: Option<u64>) -> Result<(), Cont
 const TARGET_CONTRACT_VERSION: &str = "0.1.1";
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    let prev_version = cw2::get_contract_version(deps.as_ref().storage)?;
-
-    if prev_version.contract != CONTRACT_NAME {
-        return Err(ContractError::Std(StdError::generic_err(
-            "invalid contract",
-        )));
-    }
-
-    if prev_version.version != TARGET_CONTRACT_VERSION {
-        return Err(ContractError::Std(StdError::generic_err(format!(
-            "invalid contract version. target {}, but source is {}",
-            TARGET_CONTRACT_VERSION, prev_version.version
-        ))));
-    }
-
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    migrate_version(
+        deps,
+        TARGET_CONTRACT_VERSION,
+        CONTRACT_NAME,
+        CONTRACT_VERSION,
+    )?;
 
     Ok(Response::default())
 }
