@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::asset::{AssetInfo, PairInfo};
+use crate::asset::{Asset, AssetInfo, PairInfo};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -21,8 +21,7 @@ pub enum ExecuteMsg {
     },
     /// CreatePair instantiates pair contract
     CreatePair {
-        /// Asset infos
-        asset_infos: [AssetInfo; 2],
+        assets: [Asset; 2],
     },
     AddNativeTokenDecimals {
         denom: String,

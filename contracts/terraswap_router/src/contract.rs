@@ -19,6 +19,7 @@ use terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
+use terraswap::util::migrate_version;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-router";
@@ -51,6 +52,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             operations,
             minimum_receive,
             to,
+            deadline,
         } => {
             let api = deps.api;
             execute_swap_operations(
@@ -60,9 +62,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 operations,
                 minimum_receive,
                 optional_addr_validate(api, to)?,
+                deadline,
             )
         }
-        ExecuteMsg::ExecuteSwapOperation { operation, to } => {
+        ExecuteMsg::ExecuteSwapOperation {
+            operation,
+            to,
+            deadline,
+        } => {
             let api = deps.api;
             execute_swap_operation(
                 deps,
@@ -70,6 +77,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 info,
                 operation,
                 optional_addr_validate(api, to)?.map(|v| v.to_string()),
+                deadline,
             )
         }
         ExecuteMsg::AssertMinimumReceive {
@@ -77,7 +85,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             prev_balance,
             minimum_receive,
             receiver,
-        } => assert_minium_receive(
+        } => assert_minimum_receive(
             deps.as_ref(),
             asset_info,
             prev_balance,
@@ -109,6 +117,7 @@ pub fn receive_cw20(
             operations,
             minimum_receive,
             to,
+            deadline,
         } => {
             let api = deps.api;
             execute_swap_operations(
@@ -118,6 +127,7 @@ pub fn receive_cw20(
                 operations,
                 minimum_receive,
                 optional_addr_validate(api, to)?,
+                deadline,
             )
         }
     }
@@ -130,6 +140,7 @@ pub fn execute_swap_operations(
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
     to: Option<Addr>,
+    deadline: Option<u64>,
 ) -> StdResult<Response> {
     let operations_len = operations.len();
     if operations_len == 0 {
@@ -157,6 +168,7 @@ pub fn execute_swap_operations(
                     } else {
                         None
                     },
+                    deadline,
                 })?,
             }))
         })
@@ -181,7 +193,7 @@ pub fn execute_swap_operations(
     Ok(Response::new().add_messages(messages))
 }
 
-fn assert_minium_receive(
+fn assert_minimum_receive(
     deps: Deps,
     asset_info: AssetInfo,
     prev_balance: Uint128,
@@ -415,8 +427,14 @@ fn test_invalid_operations() {
     .is_ok());
 }
 
+const TARGET_CONTRACT_VERSION: &str = "0.1.0";
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    migrate_version(
+        deps,
+        TARGET_CONTRACT_VERSION,
+        CONTRACT_NAME,
+        CONTRACT_VERSION,
+    )?;
     Ok(Response::default())
 }

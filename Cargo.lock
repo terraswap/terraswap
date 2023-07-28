@@ -658,11 +658,12 @@ dependencies = [
 
 [[package]]
 name = "terraswap"
-version = "2.8.0"
+version = "2.9.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "cw2",
  "cw20",
  "protobuf",
  "schemars",
@@ -671,7 +672,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-factory"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -687,7 +688,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-pair"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -704,7 +705,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-router"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",

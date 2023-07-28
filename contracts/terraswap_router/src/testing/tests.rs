@@ -55,6 +55,7 @@ fn execute_swap_operations() {
         operations: vec![],
         minimum_receive: None,
         to: None,
+        deadline: None,
     };
 
     let info = mock_info("addr0000", &[]);
@@ -93,6 +94,7 @@ fn execute_swap_operations() {
         ],
         minimum_receive: Some(Uint128::from(1000000u128)),
         to: None,
+        deadline: None,
     };
 
     let info = mock_info("addr0000", &[]);
@@ -113,6 +115,7 @@ fn execute_swap_operations() {
                         },
                     },
                     to: None,
+                    deadline: None,
                 })
                 .unwrap(),
             })),
@@ -129,6 +132,7 @@ fn execute_swap_operations() {
                         },
                     },
                     to: None,
+                    deadline: None,
                 })
                 .unwrap(),
             })),
@@ -145,6 +149,7 @@ fn execute_swap_operations() {
                         },
                     },
                     to: Some("addr0000".to_string()),
+                    deadline: None,
                 })
                 .unwrap(),
             })),
@@ -196,6 +201,7 @@ fn execute_swap_operations() {
             ],
             minimum_receive: None,
             to: Some("addr0002".to_string()),
+            deadline: None,
         })
         .unwrap(),
     });
@@ -218,6 +224,7 @@ fn execute_swap_operations() {
                         },
                     },
                     to: None,
+                    deadline: None,
                 })
                 .unwrap(),
             })),
@@ -234,6 +241,7 @@ fn execute_swap_operations() {
                         },
                     },
                     to: None,
+                    deadline: None,
                 })
                 .unwrap(),
             })),
@@ -250,6 +258,7 @@ fn execute_swap_operations() {
                         },
                     },
                     to: Some("addr0002".to_string()),
+                    deadline: None,
                 })
                 .unwrap(),
             }))
@@ -307,6 +316,7 @@ fn execute_swap_operation() {
             },
         },
         to: None,
+        deadline: None,
     };
     let info = mock_info("addr0000", &[]);
     let res = execute(deps.as_mut(), mock_env(), info, msg.clone());
@@ -330,7 +340,8 @@ fn execute_swap_operation() {
                     amount: Uint128::from(1000000u128)
                 },
                 None,
-                None
+                None,
+                None,
             )
             .unwrap()
         )],
@@ -348,6 +359,7 @@ fn execute_swap_operation() {
             },
         },
         to: Some("addr0000".to_string()),
+        deadline: None,
     };
     let info = mock_info(MOCK_CONTRACT_ADDR, &[]);
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -364,7 +376,8 @@ fn execute_swap_operation() {
                     amount: Uint128::from(1000000u128)
                 },
                 None,
-                Some("addr0000".to_string())
+                Some("addr0000".to_string()),
+                None,
             )
             .unwrap()
         )],
@@ -403,6 +416,7 @@ fn execute_swap_operation() {
             },
         },
         to: Some("addr0000".to_string()),
+        deadline: None,
     };
 
     let info = mock_info(MOCK_CONTRACT_ADDR, &[]);
@@ -425,6 +439,7 @@ fn execute_swap_operation() {
                     belief_price: None,
                     max_spread: None,
                     to: Some("addr0000".to_string()),
+                    deadline: None,
                 })
                 .unwrap()
             })
@@ -617,6 +632,7 @@ fn query_reverse_routes_with_from_native() {
             },
         },
         to: None,
+        deadline: None,
     };
     let info = mock_info("addr0", &[coin(offer_amount.u128(), "ukrw")]);
     let res = execute(deps.as_mut(), mock_env(), info, msg.clone());
@@ -643,6 +659,7 @@ fn query_reverse_routes_with_from_native() {
                 belief_price: None,
                 max_spread: None,
                 to: None,
+                deadline: None,
             })
             .unwrap(),
         })),],
@@ -751,6 +768,7 @@ fn query_reverse_routes_with_to_native() {
             }],
             minimum_receive: None,
             to: None,
+            deadline: None,
         })
         .unwrap(),
     });
@@ -772,6 +790,7 @@ fn query_reverse_routes_with_to_native() {
                     },
                 },
                 to: Some("addr0".to_string()),
+                deadline: None,
             })
             .unwrap(),
         })),],
@@ -787,6 +806,7 @@ fn query_reverse_routes_with_to_native() {
             },
         },
         to: None,
+        deadline: None,
     };
 
     let info = mock_info(MOCK_CONTRACT_ADDR, &[]);
@@ -810,6 +830,7 @@ fn query_reverse_routes_with_to_native() {
                     belief_price: None,
                     max_spread: None,
                     to: None,
+                    deadline: None,
                 })
                 .unwrap(),
             })

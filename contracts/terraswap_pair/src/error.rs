@@ -21,12 +21,21 @@ pub enum ContractError {
     #[error("Max spread assertion")]
     MaxSpreadAssertion {},
 
-    #[error("Max slippage assertion")]
-    MaxSlippageAssertion {},
-
     #[error("Asset mismatch")]
     AssetMismatch {},
 
-    #[error("Too small offer amount")]
-    TooSmallOfferAmount {},
+    #[error("Min amount assertion ({min_asset} > {asset})")]
+    MinAmountAssertion { min_asset: String, asset: String },
+
+    #[error("Expired deadline")]
+    ExpiredDeadline {},
+
+    #[error("Max slippage assertion")]
+    MaxSlippageAssertion {},
+
+    #[error("More initial liquidity needed ({min_lp_token} > {given_lp})")]
+    MinimumLiquidityAmountError {
+        min_lp_token: String,
+        given_lp: String,
+    },
 }

@@ -4,7 +4,7 @@
 
 ### Initialize
 
-This is mainly used from terraswap factory contract to create new terraswap pair. It initialize all swap created parameters which can be updated later with owner key.
+This is mainly used from terraswap factory contract to create new terraswap pair. It initializes all swap created parameters which can be updated later with owner key.
 
 It creates liquidity token contract as init response, and execute init hook to register created liquidity token contract to self.
 
@@ -25,21 +25,25 @@ The contract has two types of pool, the one is collateral and the other is asset
 
 Whenever liquidity is deposited into a pool, special tokens known as liquidity tokens are minted to the provider’s address, in proportion to how much liquidity they contributed to the pool. These tokens are a representation of a liquidity provider’s contribution to a pool. Whenever a trade occurs, the `lp_commission%` of fee is distributed pro-rata to all LPs in the pool at the moment of the trade. To receive the underlying liquidity back, plus commission fees that were accrued while their liquidity was locked, LPs must burn their liquidity tokens.
 
-When providing liquidity from a smart contract, the most important thing to keep in mind is that tokens deposited into a pool at any rate other than the current oracle price ratio are vulnerable to being arbitraged. As an example, if the ratio of x:y in a pair is 10:2 (i.e. the price is 5), and someone naively adds liquidity at 5:2 (a price of 2.5), the contract will simply accept all tokens (changing the price to 3.75 and opening up the market to arbitrage), but only issue pool tokens entitling the sender to the amount of assets sent at the proper ratio, in this case 5:1. To avoid donating to arbitrageurs, it is imperative to add liquidity at the current price. Luckily, it’s easy to ensure that this condition is met!
+When providing liquidity from a smart contract, tokens deposited into a pool at a rate different from the current oracle price will be returned to users.
 
 > Note before executing the `provide_liqudity` operation, a user must allow the contract to use the liquidity amount of asset in the token contract.
 
-#### Slipage Tolerance
+#### Receiver
 
-If a user specify the slipage tolerance at provide liquidity msg, the contract restricts the operation when the exchange rate is dropped more than the tolerance.
+If a user specifies the `receiver` at `provide_liqudity` msg, sends LP token to receiver. The default value is sender.
 
-So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 ASSET, amountUSTMin should be set to e.g. 198 UST, and amountASSETMin should be set to .99 ASSET. This means that, at worst, liquidity will be added at a rate between 198 ASSET/1 UST and 202.02 UST/1 ASSET (200 UST/.99 ASSET).
+#### Min Assets
+
+If a user specifies the `min_assets` at `withdraw_liquidity` msg, the contract restricts the operation when the returned assets are less than the min assets.
+
+#### Deadline
+
+A `deadline` sets a time after which a transaction can no longer be executed. This limits validators holding signed transactions for extended durations and executing them based off market movements. It also reduces uncertainty around transactions that take a long time to execute due to issues with gas price.
 
 #### Request Format
 
 - Provide Liquidity
-
-  1. Without Slippage Tolerance
 
   ```json
   {
@@ -48,7 +52,7 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         {
           "info": {
             "token": {
-              "contract_addr": "terra~~"
+              "contract_addr": "terra..."
             }
           },
           "amount": "1000000"
@@ -56,7 +60,7 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         {
           "info": {
             "native_token": {
-              "denom": "uusd"
+              "denom": "uluna"
             }
           },
           "amount": "1000000"
@@ -66,16 +70,17 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
   }
   ```
 
-  2. With Slippage Tolerance
+- Withdraw Liquidity (must be sent to liquidity token contract)
+  1. With Min Assets
 
   ```json
   {
-    "provide_liquidity": {
-      "assets": [
+    "withdraw_liquidity": {
+      "min_assets": [
         {
           "info": {
             "token": {
-              "contract_addr": "terra~~"
+              "contract_addr": "terra..."
             }
           },
           "amount": "1000000"
@@ -83,18 +88,18 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         {
           "info": {
             "native_token": {
-              "denom": "uusd"
+              "denom": "uluna"
             }
           },
           "amount": "1000000"
         }
       ]
-    },
-    "slippage_tolerance": "0.01"
+    }
   }
   ```
 
-- Withdraw Liquidity (must be sent to liquidity token contract)
+  2. Without Min Assets
+
   ```json
   {
     "withdraw_liquidity": {}

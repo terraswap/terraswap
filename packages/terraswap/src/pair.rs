@@ -22,8 +22,9 @@ pub enum ExecuteMsg {
     /// ProvideLiquidity a user provides pool liquidity
     ProvideLiquidity {
         assets: [Asset; 2],
-        slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
+        deadline: Option<u64>,
+        slippage_tolerance: Option<Decimal>,
     },
     /// Swap an offer asset to the other
     Swap {
@@ -31,6 +32,7 @@ pub enum ExecuteMsg {
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         to: Option<String>,
+        deadline: Option<u64>,
     },
 }
 
@@ -42,8 +44,12 @@ pub enum Cw20HookMsg {
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         to: Option<String>,
+        deadline: Option<u64>,
     },
-    WithdrawLiquidity {},
+    WithdrawLiquidity {
+        min_assets: Option<[Asset; 2]>,
+        deadline: Option<u64>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
